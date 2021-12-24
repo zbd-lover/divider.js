@@ -1,11 +1,10 @@
+import isPlainObject from "./isPlainObject";
 
-export default function extend(a, b, diff) {
-  if (!a) return {};
-  if (!diff) {
-    return Object.assign(a, b);
+export default function extend(a, b) {
+  if (!isPlainObject(a) || !isPlainObject(b)) {
+    throw new Error(
+      `Expected the a and b both are plain object.`
+    );
   }
-  let obj = {}
-  Object.assign(obj, a)
-  Object.assign(obj, b);
-  return obj;
+  return extend(extend({}, a), b);
 }
