@@ -1,0 +1,25 @@
+{
+  "name": "divider",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "babel": "./node_modules/.bin/babel src --out-dir lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitee.com:zheng-baodi/divider.git"
+  },
+  "keywords": [],
+  "author": "zbd",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/cli": "^7.16.0",
+    "@babel/core": "^7.16.5",
+    "@babel/preset-env": "^7.16.5"
+  },
+  "dependencies": {
+    "@babel/polyfill": "^7.12.1"
+  }
+}
