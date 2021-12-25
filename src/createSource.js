@@ -1,17 +1,36 @@
 import extend from "./util/extend";
 import _typeof from "./util/typeof";
+import verifyShape from "./util/verifyShape";
+
+const defaultInsepctor = {
+  enabled: false,
+  error: true,
+  interval: 2000,
+  tolerance: 3,
+}
 
 /**
- * Creates a divided source that is 'discrete' or 'sequence'. 
- * Source only care about order of action to change it.
- * If source as 'sequence', source only can be changed one action by one action,
- * sequence can look like 'sync', 'discrete' looks like 'async'.
- * @param {Function} process 
- * @param {Boolean} discrete source is 'discrete' or 'sequence'
- * @returns {Source}
+ * @param {Function} process is consist of all relative operations of data.
+ * @param {Boolean} discrete decides the relative ops is 'discrete' or 'sequence'.
+ * @returns {source}
  */
+function createSource(process, discrete, inspectorOption) {
 
-function createSource(process, discrete, strict = true) {
+  if (_typeof(process) !== 'function') {
+    throw new Error(`Expected the process as a function. Instead, received: ${_typeof(process)}`);
+  }
+
+  if (_typeof(discrete) !== 'undefined' && _typeof(discrete) !== 'object') {
+    inspectorOption = discrete;
+  }
+
+  let _inspectorOption;
+
+  if (inspectorOption && _typeof(inspectorOption) !== 'object') {
+    throw new Error(`Expected the inspect as a object. Instead, received: ${_typeof(inspectorOption)}`);
+  } else {
+    _inspectorOption = extend(extend({}, defaultInsepctor), inspectorOption || {});
+  }
 
   let nextListeners = [];
 
@@ -23,10 +42,10 @@ function createSource(process, discrete, strict = true) {
    * @param {Function} listener your specified listener
    * @returns {Function} Function A remove the specified listener
    */
-  function addActionListener(type, listener) {
+  function addTaskListener(type, listener) {
     if (_typeof(type) !== "string") {
       throw new Error(
-        `Parameter called type expects a string, but received: ${_typeof(type)}`
+        `Parameter called task expects a string, but received: ${_typeof(type)}`
       );
     }
 
@@ -51,86 +70,168 @@ function createSource(process, discrete, strict = true) {
     };
   }
 
-  // Normally, dispatching of each action hopes a response.
-  // They are used for verifing 'dispatch times' and 'response times' are matched.
-  // Program will throw Error when they are not matched, 
-  // when the parameter named 'strict' of 'createSource' is 'true' .
-  let sendTimes = 0;
-  let receiveTimes = 0;
+  /** state machine's uid */
+  let suid = 0;
 
   /**
-   * Verifys 'dispatch times' and 'response times' are matched.
-   * @returns {Boolean} result matched
+   * Creates a state machine when a action is dispatched.
+   * Each task should own respective state machine,
+   * so we can be able to observe status of each task.
+   * @returns {StateMachine} hook, start and end, they are functions.
+   * start and end is used for marking processor's status.
+   * hook let's do something before processor works or after worked
    */
-  function verifyTimes() {
-    if (sendTimes !== receiveTimes) {
-      if (strict) {
-        throw new Error(`
-          You maybe forget to call 'notify' in last 'process' function.
-          It's necessary, if not, your last dispatch never ends.
-          It's maybe make bad effect for your 'hook for dispatch', or source is 'sequence', yet.
-          However, if it's as expected, we can pass 'false' to parameter called 'strict' of 'createSource' to avoid this constraint.
-        `);
+
+  function creatStateMachine() {
+    let hooks = [];
+    let processing = false;
+
+    function start(effect) {
+      if (processing) {
+        throw new Error('')
       }
-      return false;
+      if (_typeof(hooks[0]) === 'function') {
+        hooks[0]();
+      }
+      processing = true;
+      if (effect) {
+        effect();
+      }
     }
-    return true;
+
+    function end(effect) {
+      if (!processing) {
+        throw new Error('')
+      }
+      if (_typeof(hooks[1]) === 'function') {
+        hooks[1]();
+      }
+      processing = false;
+      if (effect) {
+        effect();
+      }
+    }
+
+    function hook(tag, fn) {
+      if (_typeof(tag) === 'undefined') {
+        hooks = [];
+        return;
+      }
+      let index = tag;
+      if (_typeof(index) !== 'number') {
+        if (index === 'before') {
+          index = 0;
+          return
+        }
+        if (index === 'after') {
+          index = 1;
+          return
+        }
+        throw new Error(`Invalid tag as string, valid tag is one of 'after' or'before'.`);
+      }
+      if (index === 0 || index === 1) {
+        if (_typeof(fn) === 'undefined') {
+          hooks[index] = undefined;
+        } else if (_typeof(fn) === 'function') {
+          hooks[index] = fn;
+        } else {
+          throw new Error(`Expected the fn as function. Instead, received: ${_typeof(fn)}.`);
+        }
+      } else {
+        throw new Error(`Invalid tag as number, valid tag is one of '0' or '1'.`);
+      }
+    }
+    suid++;
+
+    return {
+      hook,
+      start,
+      end,
+      uid: suid
+    }
   }
 
+  function createInspector() {
+    // It's used for verifing 'dispatch times' and 'response times' are matched.
+    // [ [0, 1], [0, null], [0, 1] ]
+    const couples = [];
+    // to avoid making bad effect program
+    const life = 100;
+    const suspects = new Array(life).fill(0);
+
+    let timer;
+    setTimeout(() => timer = setInterval(() => verifyTimes(), _inspectorOption.interval));
+
+    function verifyTimes() {
+      if (couples.length >= life) {
+        clearInterval(timer);
+        return;
+      }
+      couples.forEach((couple, index) => {
+        if (couple[0] === 0 && couple[1] !== 1) {
+          suspects[index]++;
+          return;
+        }
+        suspects[index] = 0;
+      });
+
+      if (suspects.some((suspect) => suspect >= _inspectorOption.tolerance)) {
+        const text = `
+          You maybe forget to call 'notify' in 'process' function.
+          It's maybe make bad effect for your 'hook for dispatch',
+          or source is 'sequence', yet.
+        `;
+        if (_inspectorOption.error) {
+          throw new Error(text);
+        }
+        console.warn(text);
+      }
+    }
+
+    function collect(index, flag) {
+      if (!couples[index]) {
+        couples[index] = [];
+      }
+      couples[index][flag] = flag;
+    }
+
+    return {
+      collect,
+    }
+  }
+
+  let inspector = _inspectorOption.enabled ? createInspector() : null;
+
   /**
-   * ...
+   * Can we dispatch the next action right now?
+   * Sets waiting true when processor starts working.
+   * If source is discrete, set it false only happened at time notify called,
+   * otherwise, after action dispatched.
    */
   let waiting = false;
 
   /**
-   * Each dispatch will generate a new description of processing,
-   * Cause 2
-   * @param {Action} action 
-   * @param {string | object} description 
-   * @returns Dispatch
+   * Create a dispatch and hook of one task.
+   * @param {string} type to describe what is the action.
+   * @returns {object} dispatch, hook
+   * if the type specified as string, parameter called action of the dispatch always own 'type' key with the string
    */
-  function createDispatch(description) {
-    if (_typeof(description) !== 'string' && _typeof(description) !== 'object') {
-      throw new Error(`Expected the description is a string or object. Instead, received: ${_typeof(description)}`);
+  function createTask(type) {
+    if (_typeof(type) === 'string' && !type) {
+      throw new Error(`Expected the type is not empty as a string. Instead, receive: ${type}`);
     }
 
-    if (_typeof(description) === 'string' && !description) {
-      throw new Error(`Expected the description is not empty as a string. Instead, receive: ${description}`);
-    }
-
-    if (_typeof(description) === 'object' && (!description.type || _typeof(description.type) !== 'string')) {
-      throw new Error(`
-        Expected the description must own 'type' key that is a string type and not empty. Instead, 
-        the type is: ${_typeof(description.type)}, 
-        the value is: ${description.type}}
-      `);
-    }
-
-    const status = extend(
-      extend(
-        {},
-        _typeof(description) === 'string' ? { description } : (description || {})
-      ),
-      { processsing: false }
-    );
-
-    function startProcess(work) {
-      waiting = true;
-      sendTimes++;
-      status.processing = true;
-      work();
-      if (discrete) {
-        waiting = false;
-      }
-    }
-
-    function endProcess() {
-      receiveTimes++;
-      status.processing = false;
-    }
+    const { hook, start, end, uid } = creatStateMachine();
 
     const createNotify = (action) => (datasource) => {
-      endProcess();
+      end(() => {
+        if (inspector) {
+          inspector.collect(uid, 1);
+        }
+        if (!discrete) {
+          waiting = false;
+        }
+      });
       let currentListeners = nextListeners.filter(
         (listener) => listener.target === action.type
       );
@@ -141,8 +242,8 @@ function createSource(process, discrete, strict = true) {
       }
     };
 
-    return (action) => {
-      verifyTimes();
+    const dispatch = (action) => {
+      verifyShape(action, ['type'], 'action');
       if (!discrete && waiting) {
         throw new Error(`
           Can\'t dispatch action while sequence source is being processed,
@@ -150,27 +251,33 @@ function createSource(process, discrete, strict = true) {
           called 'discrete' of 'createSource'.
         `);
       }
-      startProcess(() => process(action, createNotify(action)));
-      return status;
-    };
+      let _action = extend({}, action);
+      _action.type = type ? type : action.type;
+
+      start(
+        () => {
+          waiting = true;
+          if (inspector) {
+            inspector.collect(uid, 0);
+          }
+          process(_action, createNotify(_action))
+          if (discrete) {
+            waiting = false;
+          }
+        }
+      );
+    }
+
+    return [dispatch, hook];
   }
 
-  /** default dispatch */
-  function _dispatch(action) {
-    return createDispatch()(action);
+  function dispatchAsync(action) {
+    return createTask()[0](action);
   }
 
-  const ref = {
-    dispatch: _dispatch
-  };
+  const [dispatchSync, syncHook] = createTask();
 
-  function setDispatch(dispatch) {
-    ref.dispatch = dispatch;
-  }
-
-  function resetDispatch() {
-    ref.dispatch = _dispatch;
-  }
+  const dispatch = discrete ? dispatchAsync : dispatchSync;
 
   function isDiscrete() {
     return discrete;
@@ -180,17 +287,21 @@ function createSource(process, discrete, strict = true) {
     return waiting;
   }
 
-  return {
+  const source = {
+    dispatch,
     isDiscrete,
     isWaiting,
-    dispatch(action) {
-      return ref.dispatch(action);
-    },
-    createDispatch,
-    setDispatch,
-    resetDispatch,
-    addActionListener,
-  };
+    createTask,
+    addTaskListener
+  }
+
+  if (!discrete) {
+    source.hook = syncHook;
+  }
+
+  return source;
 }
+
+createSource(() => {});
 
 export default createSource;

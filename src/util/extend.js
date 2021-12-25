@@ -6,5 +6,12 @@ export default function extend(a, b) {
       `Expected the a and b both are plain object.`
     );
   }
-  return extend(extend({}, a), b);
+  let result = {};
+  for (let key in a) {
+    result[key] = a[key];
+  }
+  for (let key in b) {
+    result[key] = b[key]
+  }
+  return result;
 }
