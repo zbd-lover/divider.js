@@ -12,7 +12,7 @@ export default function relateSource([a, b], [c, d], makePayload, pubKeys) {
     a.add('b', (ds, action) => {
       const payload = makePayload(ds, action);
       if (pubKeys) {
-        verfyShape(payload, pubKeys);
+        verifyShape(payload, pubKeys);
       }
       c.dispatch({
         type: "b",

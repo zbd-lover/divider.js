@@ -1,6 +1,6 @@
 const _toString = Object.prototype.toString;
 
-export function __typeof__(v) {
+export function _typeof(v) {
   if (typeof v === 'undefined') {
     return 'undefined';
   }

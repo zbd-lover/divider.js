@@ -1,5 +1,5 @@
 import extend from "./util/extend";
-import __typeof__ from "./util/typeof";
+import _typeof from "./util/typeof";
 
 /**
  * Creates a divided source that is 'discrete' or 'sequence'. 
@@ -8,14 +8,12 @@ import __typeof__ from "./util/typeof";
  * sequence can look like 'sync', 'discrete' looks like 'async'.
  * @param {Function} process 
  * @param {Boolean} discrete source is 'discrete' or 'sequence'
- * @param {Boolean} strict 
  * @returns {Source}
  */
 
 function createSource(process, discrete, strict = true) {
 
   let nextListeners = [];
-  let currentStatus = null;
 
   /**
    * Adds a listener for specified action,
@@ -26,9 +24,9 @@ function createSource(process, discrete, strict = true) {
    * @returns {Function} Function A remove the specified listener
    */
   function addActionListener(type, listener) {
-    if (__typeof__(type) !== "string") {
+    if (_typeof(type) !== "string") {
       throw new Error(
-        `Parameter called type expects a string, but received: ${__typeof__(type)}`
+        `Parameter called type expects a string, but received: ${_typeof(type)}`
       );
     }
 
@@ -53,13 +51,6 @@ function createSource(process, discrete, strict = true) {
     };
   }
 
-  function decorateListener(listener, callback) {
-    return (datasource, action) => {
-      listener.callback(datasource, action);
-      callback();
-    };
-  }
-
   // Normally, dispatching of each action hopes a response.
   // They are used for verifing 'dispatch times' and 'response times' are matched.
   // Program will throw Error when they are not matched, 
@@ -76,13 +67,20 @@ function createSource(process, discrete, strict = true) {
       if (strict) {
         throw new Error(`
           You maybe forget to call 'notify' in last 'process' function.
-          It's as expected?, we can pass 'false' to parameter called 'strict'
-          of 'createSource' to avoid this error;
+          It's necessary, if not, your last dispatch never ends.
+          It's maybe make bad effect for your 'hook for dispatch', or source is 'sequence', yet.
+          However, if it's as expected, we can pass 'false' to parameter called 'strict' of 'createSource' to avoid this constraint.
         `);
       }
-      receiveTimes = sendTimes;
+      return false;
     }
+    return true;
   }
+
+  /**
+   * ...
+   */
+  let waiting = false;
 
   /**
    * Each dispatch will generate a new description of processing,
@@ -91,81 +89,79 @@ function createSource(process, discrete, strict = true) {
    * @param {string | object} description 
    * @returns Dispatch
    */
-  function makeDispatch(description) {
-    if (__typeof__(description) !== 'string' && __typeof__(description) !== 'object') {
+  function createDispatch(description) {
+    if (_typeof(description) !== 'string' && _typeof(description) !== 'object') {
+      throw new Error(`Expected the description is a string or object. Instead, received: ${_typeof(description)}`);
+    }
+
+    if (_typeof(description) === 'string' && !description) {
+      throw new Error(`Expected the description is not empty as a string. Instead, receive: ${description}`);
+    }
+
+    if (_typeof(description) === 'object' && (!description.type || _typeof(description.type) !== 'string')) {
       throw new Error(`
-        Expected the description is a string or object. Instead, received: ${__typeof__(description)}
+        Expected the description must own 'type' key that is a string type and not empty. Instead, 
+        the type is: ${_typeof(description.type)}, 
+        the value is: ${description.type}}
       `);
     }
 
-    verifyTimes();
-
     const status = extend(
-      {},
-      __typeof__(description) === 'string' ? { name: description } : description
+      extend(
+        {},
+        _typeof(description) === 'string' ? { description } : (description || {})
+      ),
+      { processsing: false }
     );
-    status.processing = false;
 
-    const startProcess = (fn) => {
+    function startProcess(work) {
+      waiting = true;
+      sendTimes++;
       status.processing = true;
-      fn();
-    };
-
-    const endProcess = () => {
-      status.processing = false;
-      if (currentStatus === status) {
-        currentStatus = null;
+      work();
+      if (discrete) {
+        waiting = false;
       }
-    };
+    }
+
+    function endProcess() {
+      receiveTimes++;
+      status.processing = false;
+    }
 
     const createNotify = (action) => (datasource) => {
-      receiveTimes++;
+      endProcess();
       let currentListeners = nextListeners.filter(
         (listener) => listener.target === action.type
       );
-      let len = currentListeners.length;
-      currentListeners = currentListeners.map((listener, index) =>
-        discrete
-          ? decorateListener(listener, () => { })
-          // If source is sequence, only ends processing 
-          // when datasource dispatched as parameter to all listener.
-          : decorateListener(
-            listener,
-            () => index === len - 1 ? endProcess() : undefined
-          )
-      );
-
       try {
-        currentListeners.forEach((listener) => listener(datasource, action));
+        currentListeners.forEach((listener) => listener.callback(datasource, action))
       } catch (e) {
         console.log(e);
       }
     };
 
     return (action) => {
-      if (!discrete && currentStatus && currentStatus.processing) {
+      verifyTimes();
+      if (!discrete && waiting) {
         throw new Error(`
           Can\'t dispatch action while sequence source is being processed,
           if 'discrete dispatch' is expected, pass 'true' to parameter
           called 'discrete' of 'createSource'.
         `);
       }
-      sendTimes++;
-      currentStatus = status;
       startProcess(() => process(action, createNotify(action)));
-      if (discrete) {
-        endProcess();
-      }
       return status;
     };
   }
 
-  function __dispatch__(action) {
-    return makeDispatch()(action);
+  /** default dispatch */
+  function _dispatch(action) {
+    return createDispatch()(action);
   }
 
   const ref = {
-    dispatch: __dispatch__
+    dispatch: _dispatch
   };
 
   function setDispatch(dispatch) {
@@ -173,19 +169,24 @@ function createSource(process, discrete, strict = true) {
   }
 
   function resetDispatch() {
-    ref.dispatch = __dispatch__;
+    ref.dispatch = _dispatch;
   }
 
   function isDiscrete() {
     return discrete;
   }
 
+  function isWaiting() {
+    return waiting;
+  }
+
   return {
     isDiscrete,
+    isWaiting,
     dispatch(action) {
       return ref.dispatch(action);
     },
-    makeDispatch,
+    createDispatch,
     setDispatch,
     resetDispatch,
     addActionListener,
