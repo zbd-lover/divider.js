@@ -1,6 +1,6 @@
 import isPlainObject from "./util/isPlainObject";
-import _typeof from "./util/typeof";
 import verifyShape from "./util/verifyShape";
+import _typeof from "./util/typeof";
 
 let forkOption = {
   enabled: [true, false],

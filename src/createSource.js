@@ -1,4 +1,3 @@
-import extend from "./util/extend";
 import _typeof from "./util/typeof";
 import verifyShape from "./util/verifyShape";
 import createInspector from "./inspector";
@@ -58,7 +57,7 @@ function createSource(process, discrete) {
   /**
    * Can we dispatch the next action right now?
    * Sets waiting true when processor starts working.
-   * If source is discrete, set it false only happened at time notify called,
+   * If source is discrete, set it false only happened at time all listeners called
    * otherwise, after action dispatched.
    */
   let waiting = false;
@@ -142,8 +141,8 @@ function createSource(process, discrete) {
         `);
       }
 
-      if(hasDefaultType) {
-        _action = extend({}, { type, payload: action });
+      if (hasDefaultType) {
+        _action = { type, payload: action };
       } else {
         verifyShape(action, ['type'], 'action');
         _action = action;

@@ -29,22 +29,6 @@ var divider = (function (exports) {
     return Object.getPrototypeOf(obj) === Object.prototype;
   }
 
-  function extend(a, b) {
-    if (!isPlainObject(a) || !isPlainObject(b)) {
-      throw new Error(
-        `Expected the a and b both are plain object.`
-      );
-    }
-    let result = {};
-    for (let key in a) {
-      result[key] = a[key];
-    }
-    for (let key in b) {
-      result[key] = b[key];
-    }
-    return result;
-  }
-
   const hasOwn = Object.prototype.hasOwnProperty;
 
   /**
@@ -270,7 +254,7 @@ var divider = (function (exports) {
     /**
      * Can we dispatch the next action right now?
      * Sets waiting true when processor starts working.
-     * If source is discrete, set it false only happened at time notify called,
+     * If source is discrete, set it false only happened at time all listeners called
      * otherwise, after action dispatched.
      */
     let waiting = false;
@@ -354,8 +338,8 @@ var divider = (function (exports) {
         `);
         }
 
-        if(hasDefaultType) {
-          _action = extend({}, { type, payload: action });
+        if (hasDefaultType) {
+          _action = { type, payload: action };
         } else {
           verifyShape(action, ['type'], 'action');
           _action = action;

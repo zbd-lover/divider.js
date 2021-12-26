@@ -1,3 +1,5 @@
+// import babel from 'rollup-plugin-babel';
+
 export default {
   "input": "./src/index.js",
   "output": [
@@ -20,5 +22,10 @@ export default {
       "format": "cjs",
       "name": "divider"
     }
-  ]
+  ],
+  // 'plugins': [
+  //   babel({
+  //     exclude: 'node_modules/**'
+  //   }),
+  // ]
 }
