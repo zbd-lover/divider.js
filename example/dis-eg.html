@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script src="./divider.js"></script>
+  <script>
+    const makeProcessor = () => {
+      const add = (obj) => {
+        return new Promise((rs, rj) => {
+          setTimeout(() => rs('added ok!'), 500);
+        })
+      }
+
+      const del = (payload) => {
+        return new Promise((rs, rj) => {
+          setTimeout(() => rs('added ok!'), 750);
+        });
+      }
+
+      const query = () => {
+        return new Promise((rs, rj) => {
+          setTimeout(() => rs({
+            data: 123,
+            success: true
+          }), 1000);
+        })
+      }
+
+      // async processor need promise the 'notify' called after your async op;
+      const processor = async (action, notify) => {
+        let { type, payload } = action;
+        switch (type) {
+          case 'add':
+            await add(payload);
+            break;
+          case 'del':
+            del(payload).then(async (rs) => {
+              notify(await query());
+            });
+            return;
+          default:
+            break;
+        }
+        notify(await query());
+      }
+
+      return (action, notify) => {
+        processor(action, notify);
+      }
+    }
+
+    // discrete
+    const source = divider.createSource(makeProcessor(), true);
+    const { hook, addTaskListener: subscribe, createDispatch } = source;
+
+    const dispatchAdd = createDispatch('add');
+    const dispatchDel = createDispatch('del');
+
+    hook(dispatchAdd, 0, () => console.log('the add coming.'))
+    hook(dispatchDel, 1, () => console.log('deleted.'))
+
+    subscribe("del", (d, action) => {
+      console.log(`${action.payload.id} was deleted.`)
+    });
+
+    subscribe("add", (d) => {
+      console.log('datasource:', d);
+      dispatchDel({id: 11});
+    });
+
+    dispatchAdd({
+      id: 5,
+      name: "1132"
+    });
+  </script>
+</body>
+
+</html>
