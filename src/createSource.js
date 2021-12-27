@@ -14,44 +14,6 @@ function createSource(process, discrete) {
     throw new Error(`Expected the process as a function. Instead, received: ${_typeof(process)}`);
   }
 
-  let nextListeners = [];
-
-  /**
-   * Adds a listener for specified action,
-   * it's called when the specified action is dispatched, then,
-   * 'datasoure' and 'action' will as parameter pass to it.
-   * @param {string} type decription of action
-   * @param {Function} listener your specified listener
-   * @returns {Function} Function A remove the specified listener
-   */
-  function addTaskListener(type, listener) {
-    if (_typeof(type) !== "string") {
-      throw new Error(
-        `Parameter called task expects a string, but received: ${_typeof(type)}`
-      );
-    }
-
-    let _listener = {
-      target: type,
-      callback: listener,
-    }
-
-    nextListeners.push(_listener);
-
-    let listening = true;
-
-    return () => {
-      if (!listening) {
-        return;
-      }
-      listening = false;
-      let index = nextListeners.indexOf(_listener);
-      if (index >= 0) {
-        nextListeners.splice(index, 1);
-      }
-    };
-  }
-
   const inspector = createInspector();
 
   /**
@@ -62,12 +24,60 @@ function createSource(process, discrete) {
    */
   let waiting = false;
 
-  let dispatchMapHook = [];
+  const dispatchMapSM = [];
 
+  const observers = [];
+
+  function addObserver(observer) {
+    if (_typeof(middleware) !== 'object') {
+      console.warn(`
+          Expected the middleware as a object, Instead, recevied: ${_typeof(middleware)}
+        `);
+      return false;
+    }
+
+    const { before, after } = observer;
+
+    if (_typeof(before) !== 'function' && _typeof(before) !== 'undefined') {
+      throw new Error(`
+        Expected the before as a function. Instead, received: ${_typeof(before)},
+      `);
+    }
+
+    if (_typeof(after) !== 'function' && _typeof(after) !== 'undefined') {
+      throw new Error(`
+        Expected the after as a function. Instead, received: ${_typeof(after)},
+      `);
+    }
+    observers.push(observer);
+  }
+
+  // The hook let's do something specified for the dispatch
   function hook(dispatch, tag, fn) {
-    const couple = dispatchMapHook.find((couple) => couple[0] === dispatch)
+    const couple = dispatchMapSM.find((couple) => couple[0] === dispatch)
     if (couple) {
-      couple[1](tag, fn);
+      couple[1].hook(tag, fn);
+      return;
+    }
+    console.warn(`Doesn't exist hook for the dispatch.`);
+  }
+
+  // The observers behavior look likes midddlware
+  // starting and ending of any dispatch will be observed.
+  // observers of 'before' is called before normal hook.
+  // observers of 'after' is called after normal hook.
+  const observers = [];
+
+  // Observe dispatch's 'before' and 'after'
+  function observe(dispatch, tag, fn) {
+    // Now, function signature looks like observe(tag, fn).
+    if (_typeof(tag) === 'function' && _typeof(dispatch) !== 'undefined' && _typeof(fn) === 'undefined') {
+      observers.push({ tag, fn });
+      return;
+    }
+    const couple = dispatchMapSM.find((couple) => couple[0] === dispatch);
+    if (couple) {
+      couple[1].observe(tag, fn);
       return;
     }
     console.warn(`Doesn't exist hook for the dispatch.`);
@@ -92,11 +102,13 @@ function createSource(process, discrete) {
 
     const hasDefaultType = _typeof(type) === 'string' && type;
 
-    const { hook, startWork, endWork } = creatStateMachine();
+    const sm = creatStateMachine(observers);
 
-    let suid = uid++;
+    observers.forEach((observe) => sm.observe(observe.tag, observe.fn));
 
-    hook('after', () => {
+    const suid = uid++;
+
+    sm.hook('after', () => {
       if (inspector) {
         inspector.collect(suid, 1);
       }
@@ -105,23 +117,13 @@ function createSource(process, discrete) {
       }
     });
 
-    const createNotify = (action) => (datasource) => {
-      let currentListeners = nextListeners.filter(
-        (listener) => listener.target === action.type
-      );
-      try {
-        currentListeners.forEach((listener) => listener.callback(datasource, action))
-      } catch (e) {
-        console.log(e);
-      }
-      endWork();
-    };
+    const createNotify = (action) => (datasource) => sm.endWork(datasource, action);
 
     let _action = {
       type,
     }
 
-    hook('before', () => {
+    sm.hook('before', () => {
       waiting = true;
       if (inspector) {
         inspector.collect(suid, 0);
@@ -148,10 +150,10 @@ function createSource(process, discrete) {
         _action = action;
       }
 
-      startWork();
+      sm.startWork();
     }
 
-    dispatchMapHook.push([dispatch, hook]);
+    dispatchMapSM.push([dispatch, sm]);
 
     return dispatch;
   }
@@ -166,10 +168,10 @@ function createSource(process, discrete) {
 
   return {
     hook,
+    observe,
     isDiscrete,
     isWaiting,
     createDispatch,
-    addTaskListener
   }
 }
 

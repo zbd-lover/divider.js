@@ -1,4 +1,21 @@
 import _typeof from "./util/typeof";
+import { getFinalFirstArray, getFinalSecondArray } from "./util/nestedArray";
+
+const indexMap = [
+  ["before", 0],
+  [0, 0],
+  ["0", 0],
+  ["after", 1],
+  [1, 1],
+  ["1", 1]
+];
+
+const _transformIndex = (key) => {
+  const couple = indexMap.filter((item) => item[0] === key).map((item) => item[1])
+  if (couple.length === 1) {
+    return couple[0][1];
+  }
+}
 
 /**
  * Creates a state machine when a action is dispatched.
@@ -9,66 +26,111 @@ import _typeof from "./util/typeof";
  * hook let's do something before processor works or after worked
  */
 
-export default function creatStateMachine() {
-  let hooks = [[], []];
+export default function creatStateMachine(observers) {
   let processing = false;
+  let hooks = [[], []];
 
-  function startWork() {
+  function validate(tag) {
+    let index = _transformIndex(tag);
+    if (_typeof(index) === 'undefined') {
+      throw new Error(`
+        Invalid tag.Expected: "before", "0", 0, "after", "1", 1. Instead, receive: ${index}
+      `)
+    }
+    return index;
+  }
+
+  function observe(tag, fn) {
+    const index = validate(tag);
+
+    if (_typeof(fn) !== 'function') {
+      throw new Error(`
+        Expected the fn as a function. Instead, received: ${_typeof(fn)}.
+      `);
+    }
+
+    const merged = hooks[index].slice(0);
+    if (index === 0) {
+      hooks[index] = [fn, merged];
+    } else {
+      hooks[index] = [merged, fn]
+    }
+  }
+
+  function hook(tag, fn) {
+    let index = validate(tag);
+    // hooks for "before"
+    let _hooks = getFinalSecondArray(hooks[0]);
+    // hooks for "after"
+    let hooks_ = getFinalFirstArray(hooks[1]);
+
+    let ftype = _typeof(fn);
+    if (ftype === 'function') {
+      // hook for "before"
+      if (index === 0) {
+        if (_hooks.length === 0) {
+          // system hook's position is 0 for "before"
+          _hooks[0] = fn;
+        } else {
+          // user's custom hook position is 1 for "before"
+          _hooks[1] = fn;
+        }
+      }
+      // hook for "after"
+      if (index === 1) {
+        if (hooks_.length === 0) {
+          // system hook's position is 1 for "after"
+          hooks_[1] = fn;
+        } else {
+          // user's custom hook position is 0 for "after"
+          hooks_[0] = fn;
+        }
+      }
+
+    } else if (ftype === 'undefined') {
+      if (index === 0) {
+        _hooks[1] = null;
+        return;
+      }
+      if (index === 1) {
+        hooks_[0] = null;
+        return;
+      }
+    } else {
+      throw new Error(`
+        Expected the fn as a function or null or undefined. Instead, received: ${ftype}
+      `);
+    }
+  }
+
+  function startWork(action) {
     if (processing) {
       throw new Error(`SM has started work!`);
     }
     processing = true;
-    hooks[0].slice(0).reverse().forEach((hook) => hook());
+    hooks[0].flat().forEach((hook) => hook(action));
   }
 
-  function endWork() {
+  function endWork(datasource, action) {
     if (!processing) {
       throw new Error(`SM has ended work!`);
     }
     processing = false;
-    hooks[1].slice(0).reverse().forEach((hook) => hook())
+    hooks[1].flat().forEach((hook) => hook(datasource, action));
   }
 
-  /**
-   * @param {number | string} tag 0 "after" 1 "before" hook's target
-   * @param {Function} fn function do something else
-   */
-  function hook(tag, fn) {
-    if (_typeof(tag) === 'undefined') {
-      hooks = hooks.map((hook) => hook.slice(0, 1));
-      return;
+  observers.forEach((observer) => {
+    if (observer.before) {
+      observe("before", observer.before);
     }
-
-    let index = tag;
-    if (_typeof(index) !== 'number') {
-      if (index === 'before') {
-        index = 0;
-      } else if (index === 'after') {
-        index = 1;
-      } else {
-        throw new Error(`Invalid tag as string, valid tag is one of 'after' or'before'.`);
-      }
+    if (observer.after) {
+      observe("after", observer.after);
     }
-
-    if (index === 0 || index === 1) {
-      if (_typeof(fn) === 'undefined') {
-        hooks[index].splice(1,1);
-      } else if (_typeof(fn) === 'function') {
-        if (hooks[index].length === 2) {
-          hooks[index] = fn;
-        } else {
-          hooks[index].push(fn);
-        }
-      } else {
-        throw new Error(`Expected the fn as function. Instead, received: ${_typeof(fn)}.`);
-      }
-    } else {
-      throw new Error(`Invalid tag as number, valid tag is 0 or 1.`);
-    }
-  }
+  });
 
   return {
     hook,
+    observe,
     startWork,
     endWork
   }
