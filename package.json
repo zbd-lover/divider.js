@@ -1,10 +1,19 @@
 {
   "name": "divider.js",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Let's divide our external data, bridge each one easily.",
   "main": "src/divider.js",
   "module": "es/index.js",
   "typings": "./index.d.ts",
+  "files": [
+    "dist",
+    "lib",
+    "es",
+    "example",
+    "src",
+    "index.d.ts"
+  ],
+  "unpkg": "dist/divider.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rollup -c",
