@@ -1,20 +1,25 @@
 {
-  "name": "zbd_divider",
-  "version": "1.1.1",
-  "description": "",
+  "name": "divider.js",
+  "version": "1.2.0",
+  "description": "Let's divide our external data, bridge each one easily.",
   "main": "src/divider.js",
   "module": "es/index.js",
+  "typings": "./index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rollup -c",
     "clean": "rimraf dist es lib example/divider.js",
-    "preBuild": ""
   },
   "repository": {
     "type": "git",
     "url": "git@gitee.com:zheng-baodi/divider.git"
   },
-  "keywords": [],
+  "keywords": [
+    "divider",
+    "bridger",
+    "external reducer",
+    "bridge external datasource"
+  ],
   "author": "zbd",
   "license": "MIT",
   "devDependencies": {
@@ -23,9 +28,5 @@
     "@babel/preset-env": "^7.16.5",
     "rimraf": "^3.0.2",
     "rollup": "^2.62.0",
-    "rollup-plugin-babel": "^4.4.0"
-  },
-  "dependencies": {
-    "@babel/polyfill": "^7.12.1"
   }
 }

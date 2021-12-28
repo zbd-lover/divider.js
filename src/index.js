@@ -1,16 +1,20 @@
 import createSource from "./createSource";
 
 function createDivider() {
-  const CURRENT_SOURCES = [];
+  const CURRENT_SOURCES_MAP = [];
 
   function _createSource_(name, processor, discrete) {
     const source = createSource(processor, !!discrete);
-    CURRENT_SOURCES.push([name, source]);
+    CURRENT_SOURCES_MAP.push([name, source]);
     return source;
+  }
+
+  return {
+    createSource: _createSource_,
+    CURRENT_SOURCES_MAP: CURRENT_SOURCES_MAP,
   }
 }
 
-export {
-  createSource
-}
+const divider = createDivider();
 
+export default divider;

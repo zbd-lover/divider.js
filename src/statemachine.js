@@ -1,5 +1,4 @@
 import _typeof from "./util/typeof";
-import { getFinalFirstArray, getFinalSecondArray } from "./util/nestedArray";
 
 const indexMap = [
   ["before", 0],
@@ -10,11 +9,34 @@ const indexMap = [
   ["1", 1]
 ];
 
-const _transformIndex = (key) => {
+function transformIndex(key) {
   const couple = indexMap.filter((item) => item[0] === key).map((item) => item[1])
   if (couple.length === 1) {
     return couple[0][1];
   }
+}
+
+/**
+ * map:
+  ["before", 0],
+  [0, 0],
+  ["0", 0],
+  ["after", 1],
+  [1, 1],
+  ["1", 1].
+  Matchs value by tag
+  if none, throw error.
+ * @param {"before" | 0 | "0" | "after" | "1" | 1} tag as index
+ * @returns {number} indexed value
+ */
+export function validateTag(tag) {
+  let index = transformIndex(tag);
+  if (_typeof(tag) === 'undefined') {
+    throw new Error(`
+      Invalid tag.Expected: "before", "0", 0, "after", "1", 1. Instead, receive: ${tag}
+    `)
+  }
+  return index;
 }
 
 /**
@@ -26,81 +48,22 @@ const _transformIndex = (key) => {
  * hook let's do something before processor works or after worked
  */
 
-export default function creatStateMachine(observers) {
-  let processing = false;
-  let hooks = [[], []];
-
-  function validate(tag) {
-    let index = _transformIndex(tag);
-    if (_typeof(index) === 'undefined') {
-      throw new Error(`
-        Invalid tag.Expected: "before", "0", 0, "after", "1", 1. Instead, receive: ${index}
-      `)
-    }
-    return index;
+export default function creatStateMachine(number = 3) {
+  const hooks = [[], []];
+  const processing = false;
+  for (let i = 1; i <= number; i++) {
+    hooks[0].push([]);
+    hooks[1].push([]);
   }
 
-  function observe(tag, fn) {
-    const index = validate(tag);
-
+  function hook(tag, fn, pos) {
+    const index = validateTag(tag);
     if (_typeof(fn) !== 'function') {
       throw new Error(`
         Expected the fn as a function. Instead, received: ${_typeof(fn)}.
       `);
     }
-
-    const merged = hooks[index].slice(0);
-    if (index === 0) {
-      hooks[index] = [fn, merged];
-    } else {
-      hooks[index] = [merged, fn]
-    }
-  }
-
-  function hook(tag, fn) {
-    let index = validate(tag);
-    // hooks for "before"
-    let _hooks = getFinalSecondArray(hooks[0]);
-    // hooks for "after"
-    let hooks_ = getFinalFirstArray(hooks[1]);
-
-    let ftype = _typeof(fn);
-    if (ftype === 'function') {
-      // hook for "before"
-      if (index === 0) {
-        if (_hooks.length === 0) {
-          // system hook's position is 0 for "before"
-          _hooks[0] = fn;
-        } else {
-          // user's custom hook position is 1 for "before"
-          _hooks[1] = fn;
-        }
-      }
-      // hook for "after"
-      if (index === 1) {
-        if (hooks_.length === 0) {
-          // system hook's position is 1 for "after"
-          hooks_[1] = fn;
-        } else {
-          // user's custom hook position is 0 for "after"
-          hooks_[0] = fn;
-        }
-      }
-
-    } else if (ftype === 'undefined') {
-      if (index === 0) {
-        _hooks[1] = null;
-        return;
-      }
-      if (index === 1) {
-        hooks_[0] = null;
-        return;
-      }
-    } else {
-      throw new Error(`
-        Expected the fn as a function or null or undefined. Instead, received: ${ftype}
-      `);
-    }
+    hooks[index][pos].push(fn);
   }
 
   function startWork(action) {
@@ -119,18 +82,8 @@ export default function creatStateMachine(observers) {
     hooks[1].flat().forEach((hook) => hook(datasource, action));
   }
 
-  observers.forEach((observer) => {
-    if (observer.before) {
-      observe("before", observer.before);
-    }
-    if (observer.after) {
-      observe("after", observer.after);
-    }
-  });
-
   return {
     hook,
-    observe,
     startWork,
     endWork
   }
