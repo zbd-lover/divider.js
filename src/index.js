@@ -4,6 +4,10 @@ function createDivider() {
   const CURRENT_SOURCES_MAP = [];
 
   function _createSource_(name, processor, discrete) {
+    if (!name) {
+      discrete = processor;
+      processor = name;
+    }
     const source = createSource(processor, !!discrete);
     CURRENT_SOURCES_MAP.push([name, source]);
     return source;

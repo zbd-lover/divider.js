@@ -37,7 +37,7 @@
       const processor = async (action, notify) => {
         let { type, payload } = action;
         switch (type) {
-          case 'add':
+          case 'create':
             await add(payload);
             break;
           case 'del':
@@ -48,7 +48,7 @@
           default:
             break;
         }
-        notify(await query());
+        // notify(await query());
       }
 
       return (action, notify) => {
@@ -57,27 +57,22 @@
     }
 
     // discrete
-    const source = divider.createSource(makeProcessor(), true);
-    const { hook, addTaskListener: subscribe, createDispatch } = source;
+    const source = divider.createSource("test", makeProcessor(), true);
+    const { observe, createDispatch } = source;
 
     const dispatchAdd = createDispatch('add');
     const dispatchDel = createDispatch('del');
 
-    hook(dispatchAdd, 0, () => console.log('the add coming.'))
-    hook(dispatchDel, 1, () => console.log('deleted.'))
+    observe("add", 0, (action) => {
+      console.log(action);
+    })
 
-    subscribe("del", (d, action) => {
-      console.log(`${action.payload.id} was deleted.`)
+    observe("add", 0, (action) => {
+      console.log('second');
     });
 
-    subscribe("add", (d) => {
-      console.log('datasource:', d);
-      dispatchDel({id: 11});
-    });
-
-    dispatchAdd({
-      id: 5,
-      name: "1132"
+    observe("add", 1, (d, a) => {
+      console.log(d, a);
     });
   </script>
 </body>

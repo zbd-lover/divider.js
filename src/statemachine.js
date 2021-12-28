@@ -12,7 +12,7 @@ const indexMap = [
 function transformIndex(key) {
   const couple = indexMap.filter((item) => item[0] === key).map((item) => item[1])
   if (couple.length === 1) {
-    return couple[0][1];
+    return couple[0];
   }
 }
 
@@ -33,7 +33,7 @@ export function validateTag(tag) {
   let index = transformIndex(tag);
   if (_typeof(tag) === 'undefined') {
     throw new Error(`
-      Invalid tag.Expected: "before", "0", 0, "after", "1", 1. Instead, receive: ${tag}
+      Invalid tag.Expected: "before", "0", 0, "after", "1", 1. Instead, received: ${tag}
     `)
   }
   return index;
@@ -50,7 +50,7 @@ export function validateTag(tag) {
 
 export default function creatStateMachine(number = 3) {
   const hooks = [[], []];
-  const processing = false;
+  let processing = false;
   for (let i = 1; i <= number; i++) {
     hooks[0].push([]);
     hooks[1].push([]);

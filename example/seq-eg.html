@@ -11,8 +11,9 @@
 <body>
   <script src="./divider.js"></script>
   <script>
+
     // Sequence source usage example
-    
+
     // In the folloing example, cause we operate it directly, the data is "mutable mode".
     // you can use "immutable mode", it's entirely up to you.
 
@@ -46,7 +47,7 @@
       return (action, notify) => {
         let { type, payload } = action;
         switch (type) {
-          case 'add':
+          case 'create':
             add(payload);
             break;
           case 'del':
@@ -59,53 +60,50 @@
       }
     }
 
-    const source = divider.createSource(makeProcessor());
-    const { hook, addTaskListener: subscribe, createDispatch } = source;
+
+    const source = divider.createSource("test", makeProcessor());
+    const { observe, createDispatch } = source;
+
+    // observes all action.
+    observe(0, (action) => {
+      console.log('action:', action);
+    });
 
     // Cause source is sequence, we just create the dispatch once.
-    const dispatch = createDispatch();
+    const dispatch = createDispatch('create');
 
-    hook(dispatch, 0, () => {
+    // observes specific action.
+    observe('create', 0, () => {
       console.log('starts calc');
     });
 
-    hook(dispatch, 1, () => {
+    observe('create', 1, () => {
       console.log('ends cacl');
-    });
-
-    subscribe("add", (d) => {
-      console.log('datasource:', d);
-    });
-
-    subscribe("del", (d, action) => {
-      console.log(`${action.payload.id} was deleted.`)
+      console.log('----------');
     });
 
     dispatch({
-      type: "add",
-      payload: {
-        id: 5,
-        name: "1132",
-      }
+      id: 5,
+      name: "1132",
     });
 
     setTimeout(() => {
-      // remove hook by setting 'fn' null explicitly 
-      hook(dispatch, 1, null);
       dispatch({
-        type: "del",
-        payload: {
-          id: 2,
-        }
+        id: 5,
+        name: "1132",
       });
-      setTimeout(delDispatch({id: 5}), 500);
+
+      setTimeout(() => {
+        delDispatch({ id: 5 });
+      }, 500);
     }, 500);
 
     const delDispatch = createDispatch("del");
 
-    hook(delDispatch, 0, () => {
+    observe("del", 0, () => {
       console.log("I separates with hook for other dispatchs.");
     });
+
 
   </script>
 </body>

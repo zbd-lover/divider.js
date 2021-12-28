@@ -41,14 +41,14 @@ function createSource(process, discrete) {
     // Function signature looks like observe(tag, fn).
     if (_typeof(tag) === 'function' && _typeof(type) !== 'undefined' && _typeof(fn) === 'undefined') {
       let index = validateTag(type);
-      observers[index].push({ tag, fn })
+      observers[index].push(tag)
       return;
     }
 
     const couple = dispatchMapSM.find((couple) => couple[0] === type);
     if (couple) {
       let index = validateTag(tag);
-      couple[1].observe(tag, fn, index === 0 ? 2 : 1);
+      couple[1].hook(tag, fn, index === 0 ? 2 : 1);
       return;
     }
 
@@ -92,7 +92,7 @@ function createSource(process, discrete) {
       2
     );
     // observers hook
-    observers[1].forEach((observer) => sm.hook(observer.tag, observer.fn, 0));
+    observers[1].forEach((fn) => sm.hook(1, fn, 0));
 
     const createNotify = (action) => (datasource) => sm.endWork(datasource, action);
 
@@ -108,7 +108,6 @@ function createSource(process, discrete) {
         if (inspector) {
           inspector.collect(suid, 0);
         }
-        process(_action, createNotify(_action));
         if (discrete) {
           waiting = false;
         }
@@ -116,7 +115,7 @@ function createSource(process, discrete) {
       0
     );
     // observers hook
-    observers[0].forEach((observer) => sm.hook(observer.tag, observer.fn, 1));
+    observers[0].forEach((fn) => sm.hook(0, fn, 1));
 
     const dispatch = (action) => {
       if (!discrete && waiting) {
@@ -130,7 +129,8 @@ function createSource(process, discrete) {
         type,
         payload: action
       }
-      sm.startWork();
+      sm.startWork(_action);
+      process(_action, createNotify(_action));
     }
 
     dispatchMapSM.push([type, sm]);
