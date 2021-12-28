@@ -49,7 +49,7 @@ function createSource(process, discrete) {
     if (couple) {
       let index = validateTag(tag);
       couple[1].hook(tag, fn, index === 0 ? 2 : 1);
-      return;
+      return type;
     }
 
     console.warn(`Doesn't exist hook for the dispatch with type: ${type}.`);

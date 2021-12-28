@@ -238,7 +238,7 @@ function createSource(process, discrete) {
     if (couple) {
       let index = validateTag(tag);
       couple[1].hook(tag, fn, index === 0 ? 2 : 1);
-      return;
+      return type;
     }
 
     console.warn(`Doesn't exist hook for the dispatch with type: ${type}.`);
@@ -343,25 +343,4 @@ function createSource(process, discrete) {
   }
 }
 
-function createDivider() {
-  const CURRENT_SOURCES_MAP = [];
-
-  function _createSource_(name, processor, discrete) {
-    if (!name) {
-      discrete = processor;
-      processor = name;
-    }
-    const source = createSource(processor, !!discrete);
-    CURRENT_SOURCES_MAP.push([name, source]);
-    return source;
-  }
-
-  return {
-    createSource: _createSource_,
-    CURRENT_SOURCES_MAP: CURRENT_SOURCES_MAP,
-  }
-}
-
-const divider = createDivider();
-
-export { divider as default };
+export { createSource };

@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-  typeof define === 'function' && define.amd ? define(factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.divider = factory());
-})(this, (function () { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.divider = {}));
+})(this, (function (exports) { 'use strict';
 
   const _toString = Object.prototype.toString;
 
@@ -244,7 +244,7 @@
       if (couple) {
         let index = validateTag(tag);
         couple[1].hook(tag, fn, index === 0 ? 2 : 1);
-        return;
+        return type;
       }
 
       console.warn(`Doesn't exist hook for the dispatch with type: ${type}.`);
@@ -349,27 +349,8 @@
     }
   }
 
-  function createDivider() {
-    const CURRENT_SOURCES_MAP = [];
+  exports.createSource = createSource;
 
-    function _createSource_(name, processor, discrete) {
-      if (!name) {
-        discrete = processor;
-        processor = name;
-      }
-      const source = createSource(processor, !!discrete);
-      CURRENT_SOURCES_MAP.push([name, source]);
-      return source;
-    }
-
-    return {
-      createSource: _createSource_,
-      CURRENT_SOURCES_MAP: CURRENT_SOURCES_MAP,
-    }
-  }
-
-  const divider = createDivider();
-
-  return divider;
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 }));

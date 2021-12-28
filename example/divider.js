@@ -1,4 +1,4 @@
-var divider = (function () {
+var divider = (function (exports) {
   'use strict';
 
   const _toString = Object.prototype.toString;
@@ -241,7 +241,7 @@ var divider = (function () {
       if (couple) {
         let index = validateTag(tag);
         couple[1].hook(tag, fn, index === 0 ? 2 : 1);
-        return;
+        return type;
       }
 
       console.warn(`Doesn't exist hook for the dispatch with type: ${type}.`);
@@ -346,27 +346,10 @@ var divider = (function () {
     }
   }
 
-  function createDivider() {
-    const CURRENT_SOURCES_MAP = [];
+  exports.createSource = createSource;
 
-    function _createSource_(name, processor, discrete) {
-      if (!name) {
-        discrete = processor;
-        processor = name;
-      }
-      const source = createSource(processor, !!discrete);
-      CURRENT_SOURCES_MAP.push([name, source]);
-      return source;
-    }
+  Object.defineProperty(exports, '__esModule', { value: true });
 
-    return {
-      createSource: _createSource_,
-      CURRENT_SOURCES_MAP: CURRENT_SOURCES_MAP,
-    }
-  }
+  return exports;
 
-  const divider = createDivider();
-
-  return divider;
-
-})();
+})({});
