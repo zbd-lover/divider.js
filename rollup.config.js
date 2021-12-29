@@ -1,4 +1,5 @@
 // import babel from 'rollup-plugin-babel';
+import { babel } from '@rollup/plugin-babel';
 
 export default {
   "input": "./src/index.js",
@@ -23,9 +24,7 @@ export default {
       "name": "divider"
     }
   ],
-  // 'plugins': [
-  //   babel({
-  //     exclude: 'node_modules/**'
-  //   }),
-  // ]
+  'plugins': [
+    babel({ babelHelpers: 'bundled' }),
+  ]
 }
