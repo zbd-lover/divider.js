@@ -1,6 +1,6 @@
 {
   "name": "divider.js",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Let's divide our external data, bridge each one easily.",
   "main": "lib/divider.js",
   "module": "es/divider.js",
@@ -29,7 +29,7 @@
     "external reducer",
     "bridge external datasource"
   ],
-  "npmName": "divider.js",
+  "npmName": "dividerjs",
   "author": "zbd",
   "license": "MIT",
   "devDependencies": {

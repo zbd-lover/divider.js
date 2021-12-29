@@ -48,7 +48,18 @@ function createSource(processor, discrete) {
     const couple = typeMapSM.find((couple) => couple[0] === type);
     if (couple) {
       let index = validateTag(tag);
-      couple[1].hook(tag, fn, index === 0 ? 2 : 1);
+      couple[1].hook(
+        tag,
+        (datasource, action) => {
+          if (index === 0) {
+            action = datasource;
+          }
+          if (action.type === type) {
+            fn();
+          }
+        },
+        index === 0 ? 2 : 1
+      );
       return type;
     }
 
