@@ -113,6 +113,11 @@ function createDispatch(type: string): Dispatch
 +  *Dispatch*: dispatches task to our processor.
 
 ``` javascript
+// create some dispatches.
+function createDispatched(...types:string): Dispatch[];
+```
+
+``` javascript
 function observe(type:string, tag: "0" | "before" | 0 | "1" | "after" | 1 , fn: Function): type
 ```
 +  *type*: Whom our target is, usually be parameter called type of `createDisptach`.

@@ -142,7 +142,7 @@ function createSource(processor, discrete) {
    * Creates some dispatches.
    * @param {Array<string>} types 
    */
-  function createDispatches(types) {
+  function createDispatches(...types) {
     return types.map((type) => createDispatch(type));
   }
 
