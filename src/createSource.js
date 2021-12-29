@@ -74,6 +74,10 @@ function createSource(processor, discrete) {
       `);
     }
 
+    if (typeMapSM.find((map) => map[0] === type)) {
+      throw new Error(`The type has existed: ${type}`);
+    }
+
     // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The observer_hook is called always before custom_hook.
