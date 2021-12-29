@@ -254,7 +254,15 @@ function createSource(processor, discrete) {
 
     if (couple) {
       let index = validateTag(tag);
-      couple[1].hook(tag, fn, index === 0 ? 2 : 1);
+      couple[1].hook(tag, (datasource, action) => {
+        if (index === 0) {
+          action = datasource;
+        }
+
+        if (action.type === type) {
+          fn();
+        }
+      }, index === 0 ? 2 : 1);
       return type;
     }
 
@@ -275,6 +283,10 @@ function createSource(processor, discrete) {
   function createDispatch(type) {
     if (_typeof(type) !== 'string' || !type) {
       throw new Error("\n        Expected the type as a string and not empty.\n        Instead, type received".concat(_typeof(type), ", value received:").concat(type, "\n      "));
+    }
+
+    if (typeMapSM.find(map => map[0] === type)) {
+      throw new Error("The type has existed: ".concat(type));
     } // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The observer_hook is called always before custom_hook.
