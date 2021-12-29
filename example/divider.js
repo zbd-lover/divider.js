@@ -259,11 +259,12 @@ var divider = (function (exports) {
           if (isBefore) {
             action = datasource;
           }
+
           if (action.type === type) {
             if (isBefore) {
-              fn(action)
+              fn(action);
             } else {
-              fn(datasource, action)
+              fn(datasource, action);
             }
           }
         }, isBefore ? 2 : 1);
@@ -359,6 +360,10 @@ var divider = (function (exports) {
       return types.map(type => createDispatch(type));
     }
 
+    function hasType(type) {
+      return typeMapSM.find(map => map[0] === type);
+    }
+
     function isDiscrete() {
       return !!discrete;
     }
@@ -370,6 +375,7 @@ var divider = (function (exports) {
     return {
       observe,
       isDiscrete,
+      hasType,
       isWaiting,
       createDispatch,
       createDispatches

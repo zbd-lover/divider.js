@@ -257,15 +257,20 @@
 
       if (couple) {
         let index = validateTag(tag);
+        let isBefore = index === 0;
         couple[1].hook(tag, (datasource, action) => {
-          if (index === 0) {
+          if (isBefore) {
             action = datasource;
           }
 
           if (action.type === type) {
-            fn();
+            if (isBefore) {
+              fn(action);
+            } else {
+              fn(datasource, action);
+            }
           }
-        }, index === 0 ? 2 : 1);
+        }, isBefore ? 2 : 1);
         return type;
       }
 
@@ -358,6 +363,10 @@
       return types.map(type => createDispatch(type));
     }
 
+    function hasType(type) {
+      return typeMapSM.find(map => map[0] === type);
+    }
+
     function isDiscrete() {
       return !!discrete;
     }
@@ -369,6 +378,7 @@
     return {
       observe,
       isDiscrete,
+      hasType,
       isWaiting,
       createDispatch,
       createDispatches
