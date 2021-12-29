@@ -37,7 +37,12 @@ export function setInspectorOption(option) {
   forkOption = option;
 }
 
-// 在生产模式下默认开启
+/**
+ * Normally, one dispatch means one response.
+ * Inspector will check Is the number of dispatch consistent with the number of response.
+ * In productin environent,enabled by default, it will throw errro if not.
+ * In development environent,disabeld by default.
+ */
 export default function createInspector() {
   let option;
   try {
@@ -48,7 +53,7 @@ export default function createInspector() {
   if (!option.enabled) {
     return null;
   }
-  // It's used for verifing 'dispatch times' and 'response times' are matched.
+  // 0 -> dispatch 1 -> response
   // [ [0, 1], [0, null], [0, 1] ]
   const couples = [];
   // to avoid making bad effect on program

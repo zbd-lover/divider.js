@@ -3,14 +3,14 @@ import createInspector from "./inspector";
 import creatStateMachine, { validateTag } from "./statemachine";
 
 /**
- * @param {Processor} process is consist of all relative operations of data.
+ * @param {Processor} processor is consist of all relative operations of data.
  * @param {Boolean} discrete decides the relative ops is 'discrete' or 'sequence'.
- * @returns {Source}
+ * @returns {Source} let's observe specific op of source and dispatch them.
  */
-function createSource(process, discrete) {
+function createSource(processor, discrete) {
 
-  if (_typeof(process) !== 'function') {
-    throw new Error(`Expected the process as a function. Instead, received: ${_typeof(process)}`);
+  if (_typeof(processor) !== 'function') {
+    throw new Error(`Expected the process as a function. Instead, received: ${_typeof(processor)}`);
   }
 
   const inspector = createInspector();
@@ -18,14 +18,14 @@ function createSource(process, discrete) {
   /**
    * Can we dispatch the next action right now?
    * Sets waiting true when processor starts working.
-   * If source is discrete, set it false only happened at time all listeners called
+   * If source is discrete, set it false happened at time when processor stop working,
    * otherwise, after action dispatched.
    */
   let waiting = false;
 
-  const dispatchMapSM = [];
+  // Type of action maps its state machine
+  const typeMapSM = [];
 
-  // The observers behavior look likes midddlware.
   // starting and ending of any dispatch can be observed.
   // observers[0] -> starting
   // observers[1] -> ending
@@ -35,7 +35,7 @@ function createSource(process, discrete) {
    * Observe dispatch.
    * @param {string} type  whom we observe
    * @param {Tag} tag observing time
-   * @param {HookForE | HookForS} fn what something we want to do, if the type is observed.
+   * @param {Function} fn what something we want to do, if the type is observed.
    */
   function observe(type, tag, fn) {
     // Function signature looks like observe(tag, fn).
@@ -45,7 +45,7 @@ function createSource(process, discrete) {
       return;
     }
 
-    const couple = dispatchMapSM.find((couple) => couple[0] === type);
+    const couple = typeMapSM.find((couple) => couple[0] === type);
     if (couple) {
       let index = validateTag(tag);
       couple[1].hook(tag, fn, index === 0 ? 2 : 1);
@@ -56,15 +56,15 @@ function createSource(process, discrete) {
   }
 
   // It's used to do index state machie by the type.
-  // Inspector uses it to want know who is processing, too.
+  // Inspector uses it to know who is processing, too.
   let uid = 0;
 
   /**
-   * Create a dispatch and  for task you want.
+   * Create a dispatch for task you want.
    * We need 'pre-create' the each dispatch with the 'type', then, just use these dispatchs.
    * @param {string} type Describes what is the action.
-   * @returns {Dispatch<T>} Function A that dispatchs action to your processor.
-   * if the type specified as string, parameter called action of the dispatch always own 'type' key with the string
+   * @returns {Dispatch} Function A that dispatchs action to your processor.
+   * If the type specified as string, parameter called action always own 'type' key with the string
    */
   function createDispatch(type) {
     if (_typeof(type) !== 'string' || !type) {
@@ -74,8 +74,12 @@ function createSource(process, discrete) {
       `);
     }
 
-    // 将状态机的钩子函数分为三个部分，以实现优先级
+    // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
+    // The observe_hook's action like middleware, because it can observe any dispatch of one source.
+    // The observer_hook is called always before custom_hook.
+    // The system_hook is used for developer to control 'waiting' and something necessary.
     const sm = creatStateMachine(3);
+
     const suid = uid++;
 
     // system hook
@@ -92,7 +96,7 @@ function createSource(process, discrete) {
       2
     );
     // observers hook
-    observers[1].forEach((fn) => sm.hook(1, fn, 0));
+    observers[1].forEach((fn) => sm.hook("after", fn, 0));
 
     const createNotify = (action) => (datasource) => sm.endWork(datasource, action);
 
@@ -102,7 +106,7 @@ function createSource(process, discrete) {
 
     // system hook
     sm.hook(
-      'before',
+      "before",
       () => {
         waiting = true;
         if (inspector) {
@@ -115,14 +119,15 @@ function createSource(process, discrete) {
       0
     );
     // observers hook
-    observers[0].forEach((fn) => sm.hook(0, fn, 1));
+    observers[0].forEach((fn) => sm.hook("before", fn, 1));
 
-    const dispatch = (action) => {
+    function dispatch(action) {
       if (!discrete && waiting) {
         throw new Error(`
           Can\'t dispatch action while sequence source is being processed,
           if 'discrete dispatch' is expected, pass 'true' to parameter
           called 'discrete' of 'createSource'.
+          The current type is ${type}.
         `);
       }
       _action = {
@@ -130,10 +135,10 @@ function createSource(process, discrete) {
         payload: action
       }
       sm.startWork(_action);
-      process(_action, createNotify(_action));
+      processor(_action, createNotify(_action));
     }
 
-    dispatchMapSM.push([type, sm]);
+    typeMapSM.push([type, sm]);
 
     return dispatch;
   }

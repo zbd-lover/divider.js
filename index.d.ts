@@ -6,13 +6,14 @@ export interface ActionWithPayload<T> extends Action {
   payload?: T;
 }
 
-export type Dispatch<T> = (arg: T) => void;
+export interface Dispatch<T> {
+  (payload: ActionWithPayload<T>): void;
+}
 
 export function Observe<T, U>(
   tag: Tag,
   fn: ((action: ActionWithPayload<T>) => void) | ((datasource: T, action: ActionWithPayload<U>) => void)
 ): void;
-
 export function Observe<T, U>(
   target: string,
   tag: Tag,
@@ -21,9 +22,9 @@ export function Observe<T, U>(
 
 export interface Source {
   observe: typeof Observe;
+  createDispatch<T>(type: string): Dispatch<T>;
   isDiscrete: () => boolean;
   isWaiting: () => boolean;
-  createDispatch<T>(type: string): Dispatch<T>;
 }
 
 export interface Notify {
