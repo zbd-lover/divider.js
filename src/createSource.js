@@ -60,10 +60,10 @@ function createSource(processor, discrete) {
   let uid = 0;
 
   /**
-   * Create a dispatch for task you want.
-   * We need 'pre-create' the each dispatch with the 'type', then, just use these dispatchs.
+   * Creates a dispatch for task you want.
+   * We need 'pre-create' the each dispatch with the 'type', then, just use these dispatches.
    * @param {string} type Describes what is the action.
-   * @returns {Dispatch} Function A that dispatchs action to your processor.
+   * @returns {Dispatch} Function A that dispatches action to your processor.
    * If the type specified as string, parameter called action always own 'type' key with the string
    */
   function createDispatch(type) {
@@ -100,10 +100,6 @@ function createSource(processor, discrete) {
 
     const createNotify = (action) => (datasource) => sm.endWork(datasource, action);
 
-    let _action = {
-      type,
-    }
-
     // system hook
     sm.hook(
       "before",
@@ -121,7 +117,7 @@ function createSource(processor, discrete) {
     // observers hook
     observers[0].forEach((fn) => sm.hook("before", fn, 1));
 
-    function dispatch(action) {
+    function dispatch(payload) {
       if (!discrete && waiting) {
         throw new Error(`
           Can\'t dispatch action while sequence source is being processed,
@@ -130,17 +126,24 @@ function createSource(processor, discrete) {
           The current type is ${type}.
         `);
       }
-      _action = {
+      const action = {
         type,
-        payload: action
+        payload
       }
-      sm.startWork(_action);
-      processor(_action, createNotify(_action));
+      sm.startWork(action);
+      processor(action, createNotify(action));
     }
 
     typeMapSM.push([type, sm]);
-
     return dispatch;
+  }
+
+  /**
+   * Creates some dispatches.
+   * @param {Array<string>} types 
+   */
+  function createDispatches(types) {
+    return types.map((type) => createDispatch(type));
   }
 
   function isDiscrete() {
@@ -156,6 +159,7 @@ function createSource(processor, discrete) {
     isDiscrete,
     isWaiting,
     createDispatch,
+    createDispatches,
   }
 }
 

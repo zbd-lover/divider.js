@@ -48,6 +48,7 @@
           default:
             break;
         }
+        // program will throw error in 4.5 seconds.
         // notify(await query());
       }
 
@@ -57,7 +58,7 @@
     }
 
     // discrete
-    const source = divider.createSource("test", makeProcessor(), true);
+    const source = divider.createSource(makeProcessor(), true);
     const { observe, createDispatch } = source;
 
     const dispatchAdd = createDispatch('add');
@@ -74,6 +75,8 @@
     observe("add", 1, (d, a) => {
       console.log(d, a);
     });
+
+    dispatchAdd({ id: 11 })
   </script>
 </body>
 

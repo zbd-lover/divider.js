@@ -61,15 +61,14 @@
     }
 
 
-    const source = divider.createSource("test", makeProcessor());
+    const source = divider.createSource(makeProcessor());
     const { observe, createDispatch } = source;
 
-    // observes all action.
+    // observes all action. 
     observe(0, (action) => {
       console.log('action:', action);
     });
 
-    // Cause source is sequence, we just create the dispatch once.
     const dispatch = createDispatch('create');
 
     // observes specific action.
@@ -82,6 +81,7 @@
       console.log('----------');
     });
 
+    // Param of dispatch is called 'payload'.
     dispatch({
       id: 5,
       name: "1132",
