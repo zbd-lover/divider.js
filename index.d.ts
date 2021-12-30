@@ -32,6 +32,7 @@ export function DispatchesCreator(...args: string[]): Dispatch<any>[];
 
 export interface Source {
   observe: typeof Observe;
+  hasType: (type: string) => boolean;
   createDispatch<T>(type: string): Dispatch<T>;
   createDispatches: typeof DispatchesCreator;
   isDiscrete: () => boolean;

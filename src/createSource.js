@@ -182,8 +182,8 @@ function createSource(processor, discrete) {
   return {
     observe,
     isDiscrete,
-    hasType,
     isWaiting,
+    hasType,
     createDispatch,
     createDispatches,
   }
