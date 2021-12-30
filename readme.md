@@ -130,7 +130,7 @@ function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 , fn: Function): vo
 ```
 
 +  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter.
-+  *fn*  : What we do, at time ant action is observed on specified time. If at "before", accepts one parameter called action, otherwise , two parameters called data source and action.
++  *fn*  : What we do, at time any action is observed on specified time. If at "before", accepts one parameter called action, otherwise , two parameters called data source and action.
 +  *note*: Let's associate with middleware.
 
 # Final

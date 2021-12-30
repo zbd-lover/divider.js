@@ -378,8 +378,8 @@
     return {
       observe,
       isDiscrete,
-      hasType,
       isWaiting,
+      hasType,
       createDispatch,
       createDispatches
     };
