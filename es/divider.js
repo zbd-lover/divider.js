@@ -1,13 +1,10 @@
-import 'core-js/modules/es.array.flat.js';
-import 'core-js/modules/es.array.unscopables.flat.js';
-
-const _toString = Object.prototype.toString;
+var _toString = Object.prototype.toString;
 function _typeof(v) {
   if (typeof v === 'undefined' || v === null) {
     return 'undefined';
   }
 
-  const type = _toString.call(v).slice(8, -1).toLowerCase();
+  var type = _toString.call(v).slice(8, -1).toLowerCase();
 
   switch (type) {
     case 'string':
@@ -24,7 +21,7 @@ function _typeof(v) {
   }
 }
 
-let forkOption = {
+var forkOption = {
   enabled: [true, false],
   error: [true, false],
   interval: [1000, 1000],
@@ -32,9 +29,9 @@ let forkOption = {
 };
 
 function extractOption(index) {
-  const option = {};
+  var option = {};
 
-  for (let key in forkOption) {
+  for (var key in forkOption) {
     option[key] = forkOption[key][index];
   }
 
@@ -56,7 +53,7 @@ function getDevOption() {
  */
 
 function createInspector() {
-  let option;
+  var option;
 
   try {
     option = process.env.NODE_ENV === 'production' ? getProdOption() : getDevOption();
@@ -70,12 +67,16 @@ function createInspector() {
   // [ [0, 1], [0, null], [0, 1] ]
 
 
-  const couples = []; // to avoid making bad effect on program
+  var couples = []; // to avoid making bad effect on program
 
-  const life = 100;
-  const suspects = new Array(life).fill(0);
-  let timer;
-  setTimeout(() => timer = setInterval(() => verifyTimes(), option.interval), 500);
+  var life = 100;
+  var suspects = new Array(life).fill(0);
+  var timer;
+  setTimeout(function () {
+    return timer = setInterval(function () {
+      return verifyTimes();
+    }, option.interval);
+  }, 500);
 
   function verifyTimes() {
     if (couples.length >= life) {
@@ -83,7 +84,7 @@ function createInspector() {
       return;
     }
 
-    couples.forEach((couple, index) => {
+    couples.forEach(function (couple, index) {
       if (couple[0] === 0 && couple[1] !== 1) {
         suspects[index]++;
         return;
@@ -92,8 +93,10 @@ function createInspector() {
       suspects[index] = 0;
     });
 
-    if (suspects.some(suspect => suspect >= option.tolerance)) {
-      const text = "\n        You maybe forget to call 'notify' in 'process' function.\n        It's maybe make bad effect for your 'hook for dispatch',\n        or source is 'sequence', yet.\n      ";
+    if (suspects.some(function (suspect) {
+      return suspect >= option.tolerance;
+    })) {
+      var text = "\n        You maybe forget to call 'notify' in 'process' function.\n        It's maybe make bad effect for your 'hook for dispatch',\n        or source is 'sequence', yet.\n      ";
       couples.length = life;
 
       if (option.error) {
@@ -113,14 +116,18 @@ function createInspector() {
   }
 
   return {
-    collect
+    collect: collect
   };
 }
 
-const indexMap = [["before", 0], [0, 0], ["0", 0], ["after", 1], [1, 1], ["1", 1], ["create", 2], ["2", 2], [2, 2]];
+var indexMap = [["before", 0], [0, 0], ["0", 0], ["after", 1], [1, 1], ["1", 1], ["create", 2], ["2", 2], [2, 2]];
 
 function transformIndex(key) {
-  const couple = indexMap.filter(item => item[0] === key).map(item => item[1]);
+  var couple = indexMap.filter(function (item) {
+    return item[0] === key;
+  }).map(function (item) {
+    return item[1];
+  });
 
   if (couple.length === 1) {
     return couple[0];
@@ -145,13 +152,19 @@ function transformIndex(key) {
 
 
 function validateTag(tag) {
-  let index = transformIndex(tag);
+  var index = transformIndex(tag);
 
   if (_typeof(index) === 'undefined') {
     throw new Error("\n      Invalid tag.Expected: \"before\", \"0\", 0, \"after\", \"1\", 1, \"create\", \"2\", 2. Instead, received: ".concat(tag, "\n    "));
   }
 
   return index;
+}
+
+function flat(hooks) {
+  return hooks.reduce(function (a, b) {
+    return a.concat(b);
+  }, []);
 }
 /**
  * Creates a state machine when a action is dispatched.
@@ -168,20 +181,21 @@ function validateTag(tag) {
  * The hook let's do something before state machine works or after worked.
  */
 
+
 function creatStateMachine(target, number, effect) {
   // 0 -> before, 1 -> after 2 -> create
-  const hooks = [[], [], []];
-  let name = target;
-  let processing = false;
+  var hooks = [[], [], []];
+  var name = target;
+  var processing = false;
 
-  for (let i = 1; i <= number; i++) {
+  for (var i = 1; i <= number; i++) {
     hooks[0].push([]);
     hooks[1].push([]);
     hooks[2].push([]);
   }
 
   function hook(tag, fn, pos) {
-    const index = validateTag(tag);
+    var index = validateTag(tag);
 
     if (_typeof(fn) !== 'function') {
       throw new Error("\n        Expected the fn as a function. Instead, received: ".concat(_typeof(fn), ".\n      "));
@@ -196,7 +210,9 @@ function creatStateMachine(target, number, effect) {
     }
 
     processing = true;
-    hooks[0].flat().forEach(hook => hook(action));
+    flat(hooks[0]).forEach(function (hook) {
+      return hook(action);
+    });
   }
 
   function endWork(datasource, action) {
@@ -205,16 +221,20 @@ function creatStateMachine(target, number, effect) {
     }
 
     processing = false;
-    hooks[1].flat().forEach(hook => hook(datasource, action));
+    flat(hooks[1]).forEach(function (hook) {
+      return hook(datasource, action);
+    });
   }
 
-  const sm = {
-    hook,
-    startWork,
-    endWork
+  var sm = {
+    hook: hook,
+    startWork: startWork,
+    endWork: endWork
   };
   effect(sm);
-  hooks[2].flat().forEach(hook => hook(name));
+  flat(hooks[2]).forEach(function (hook) {
+    return hook(name);
+  });
   return sm;
 }
 
@@ -229,7 +249,7 @@ function createSource(processor, discrete) {
     throw new Error("Expected the process as a function. Instead, received: ".concat(_typeof(processor)));
   }
 
-  const inspector = createInspector();
+  var inspector = createInspector();
   /**
    * Can we dispatch the next action right now?
    * Sets waiting true when processor starts working.
@@ -237,19 +257,21 @@ function createSource(processor, discrete) {
    * otherwise, after action dispatched.
    */
 
-  let waiting = false; // Type of action maps its state machine
+  var waiting = false; // Type of action maps its state machine
 
-  const typeMapSM = [];
+  var typeMapSM = [];
 
   function hasType(type) {
-    return !!typeMapSM.find(map => map[0] === type);
+    return !!typeMapSM.find(function (map) {
+      return map[0] === type;
+    });
   } // starting and ending of any dispatch can be observed, or creating dispatch.
   // observers[0] -> starting
   // observers[1] -> ending
   // observers[2] -> creating
 
 
-  const observers = [[], [], []];
+  var observers = [[], [], []];
   /**
    * Observe dispatch.
    * @param {string} type  whom we observe
@@ -268,27 +290,29 @@ function createSource(processor, discrete) {
   }
 
   function observeAll(tag, fn) {
-    let index = validateTag(tag);
+    var index = validateTag(tag);
     observers[index].push(fn);
   }
 
-  const delays = [];
+  var delays = [];
 
   function observeOne(type, tag, fn) {
     if (!hasType(type)) {
       delays.push({
-        type,
-        tag,
-        fn
+        type: type,
+        tag: tag,
+        fn: fn
       });
       return type;
     }
 
-    const index = validateTag(tag);
-    const couple = typeMapSM.find(couple => couple[0] === type);
-    const isBefore = index === 0;
-    const isCreate = index === 2;
-    couple[1].hook(tag, (arg1, arg2) => {
+    var index = validateTag(tag);
+    var couple = typeMapSM.find(function (couple) {
+      return couple[0] === type;
+    });
+    var isBefore = index === 0;
+    var isCreate = index === 2;
+    couple[1].hook(tag, function (arg1, arg2) {
       if (isCreate && arg1 === type) {
         // fn(type);
         fn(type);
@@ -317,23 +341,24 @@ function createSource(processor, discrete) {
       return;
     }
 
-    let index = delays.findIndex(delay => delay.type === type);
+    var index = delays.findIndex(function (delay) {
+      return delay.type === type;
+    });
 
     if (index < 0) {
       return;
     }
 
-    let {
-      tag,
-      fn
-    } = delays.splice(index, 1)[0];
+    var _delays$splice$ = delays.splice(index, 1)[0],
+        tag = _delays$splice$.tag,
+        fn = _delays$splice$.fn;
     observeOne(type, tag, fn);
     tryRunDelay(type);
   } // It's used to do index state machie by the type.
   // Inspector uses it to know who is processing, too.
 
 
-  let uid = 0;
+  var uid = 0;
   /**
    * Creates a dispatch for task you want.
    * We need 'pre-create' the each dispatch with the 'type', then, just use these dispatches.
@@ -347,7 +372,9 @@ function createSource(processor, discrete) {
       throw new Error("\n        Expected the type as a string and not empty.\n        Instead, type received".concat(_typeof(type), ", value received:").concat(type, "\n      "));
     }
 
-    if (typeMapSM.find(map => map[0] === type)) {
+    if (typeMapSM.find(function (map) {
+      return map[0] === type;
+    })) {
       throw new Error("The type has existed: ".concat(type));
     } // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
@@ -355,14 +382,16 @@ function createSource(processor, discrete) {
     // The system_hook is used for developer to control 'waiting' and something necessary.
 
 
-    const sm = creatStateMachine(type, 3, sm => {
-      observers[2].forEach(fn => sm.hook("create", fn, 0));
+    var sm = creatStateMachine(type, 3, function (sm) {
+      observers[2].forEach(function (fn) {
+        return sm.hook("create", fn, 0);
+      });
       typeMapSM.push([type, sm]);
       tryRunDelay(type);
     });
-    const suid = uid++; // system hook
+    var suid = uid++; // system hook
 
-    sm.hook('after', () => {
+    sm.hook('after', function () {
       if (inspector) {
         inspector.collect(suid, 1);
       }
@@ -372,12 +401,18 @@ function createSource(processor, discrete) {
       }
     }, 2); // observers hook
 
-    observers[1].forEach(fn => sm.hook("after", fn, 0));
+    observers[1].forEach(function (fn) {
+      return sm.hook("after", fn, 0);
+    });
 
-    const createNotify = action => datasource => sm.endWork(datasource, action); // system hook
+    var createNotify = function createNotify(action) {
+      return function (datasource) {
+        return sm.endWork(datasource, action);
+      };
+    }; // system hook
 
 
-    sm.hook("before", () => {
+    sm.hook("before", function () {
       waiting = true;
 
       if (inspector) {
@@ -389,16 +424,18 @@ function createSource(processor, discrete) {
       }
     }, 0); // observers hook
 
-    observers[0].forEach(fn => sm.hook("before", fn, 1));
+    observers[0].forEach(function (fn) {
+      return sm.hook("before", fn, 1);
+    });
 
     function dispatch(payload) {
       if (!discrete && waiting) {
         throw new Error("\n          Can't dispatch action while sequence source is being processed,\n          if 'discrete dispatch' is expected, pass 'true' to parameter\n          called 'discrete' of 'createSource'.\n          The current type is ".concat(type, ".\n        "));
       }
 
-      const action = {
-        type,
-        payload
+      var action = {
+        type: type,
+        payload: payload
       };
       sm.startWork(action);
       processor(action, createNotify(action));
@@ -417,7 +454,9 @@ function createSource(processor, discrete) {
       types[_key] = arguments[_key];
     }
 
-    return types.map(type => createDispatch(type));
+    return types.map(function (type) {
+      return createDispatch(type);
+    });
   }
 
   function isDiscrete() {
@@ -429,12 +468,12 @@ function createSource(processor, discrete) {
   }
 
   return {
-    observe,
-    isDiscrete,
-    isWaiting,
-    hasType,
-    createDispatch,
-    createDispatches
+    observe: observe,
+    isDiscrete: isDiscrete,
+    isWaiting: isWaiting,
+    hasType: hasType,
+    createDispatch: createDispatch,
+    createDispatches: createDispatches
   };
 }
 

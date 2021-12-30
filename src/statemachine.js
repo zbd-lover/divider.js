@@ -45,6 +45,10 @@ export function validateTag(tag) {
   return index;
 }
 
+function flat(hooks) {
+  return hooks.reduce((a, b) => a.concat(b), [])
+}
+
 /**
  * Creates a state machine when a action is dispatched.
  * Each action should own respective state machine,
@@ -86,7 +90,7 @@ export default function creatStateMachine(target, number, effect) {
       throw new Error(`SM named ${name} has started work!`);
     }
     processing = true;
-    hooks[0].flat().forEach((hook) => hook(action));
+    flat(hooks[0]).forEach((hook) => hook(action));
   }
 
   function endWork(datasource, action) {
@@ -94,7 +98,7 @@ export default function creatStateMachine(target, number, effect) {
       throw new Error(`SM named ${name} has ended work!`);
     }
     processing = false;
-    hooks[1].flat().forEach((hook) => hook(datasource, action));
+    flat(hooks[1]).forEach((hook) => hook(datasource, action));
   }
 
   const sm = {
@@ -104,7 +108,6 @@ export default function creatStateMachine(target, number, effect) {
   }
 
   effect(sm);
-  hooks[2].flat().forEach((hook) => hook(name));
-
+  flat(hooks[2]).forEach((hook) => hook(name));
   return sm;
 }

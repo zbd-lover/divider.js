@@ -1,34 +1,95 @@
-// import babel from 'rollup-plugin-babel';
 import { babel } from '@rollup/plugin-babel';
+import { terser } from 'rollup-plugin-terser';
 
-export default {
-  "input": "./src/index.js",
-  "output": [
-    {
-      "file": "./es/divider.js",
-      "format": "esm"
+export default [
+  {
+    "input": "./src/index.js",
+    "output": {
+      "file": "./lib/divider.js",
+      "format": "cjs",
     },
-    {
+    "plugins": [
+      babel({
+        babelHelpers: 'bundled',
+      }),
+    ],
+  },
+  {
+    "input": "./src/index.js",
+    "output": {
+      "file": "./es/divider.js",
+      "format": "esm",
+    },
+    "plugins": [
+      babel({
+        babelHelpers: 'bundled',
+      }),
+    ],
+  },
+  {
+    "input": "./src/index.js",
+    "output": {
       "file": "./dist/divider.js",
       "format": "umd",
-      "name": "divider",
+      "name": "divider"
     },
-    {
+    "plugins": [
+      babel({
+        babelHelpers: 'bundled',
+      }),
+    ],
+  },
+  {
+    "input": "./src/index.js",
+    "output": {
       "file": "./example/divider.js",
       "format": "iife",
       "name": "divider"
     },
-    {
-      "file": "./lib/divider.js",
+    "plugins": [
+      babel({
+        babelHelpers: 'bundled',
+      }),
+    ],
+  },
+  {
+    "input": "./src/index.js",
+    "output": {
+      "file": "./lib/divider.min.js",
       "format": "cjs",
+    },
+    "plugins": [
+      babel({
+        babelHelpers: 'bundled',
+      }),
+      terser()
+    ],
+  },
+  {
+    "input": "./src/index.js",
+    "output": {
+      "file": "./es/divider.min.js",
+      "format": "esm",
+    },
+    "plugins": [
+      babel({
+        babelHelpers: 'bundled',
+      }),
+      terser(),
+    ],
+  },
+  {
+    "input": "./src/index.js",
+    "output": {
+      "file": "./dist/divider.min.js",
+      "format": "umd",
       "name": "divider"
-    }
-  ],
-  'plugins': [
-    babel({ babelHelpers: 'bundled' }),
-  ],
-  "external": [
-    "core-js/modules/es.array.flat.js",
-    "core-js/modules/es.array.unscopables.flat.js"
-  ]
-}
+    },
+    "plugins": [
+      babel({
+        babelHelpers: 'bundled',
+      }),
+      terser()
+    ],
+  },
+]
