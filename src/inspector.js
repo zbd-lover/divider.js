@@ -5,7 +5,7 @@ import _typeof from "./util/typeof";
 let forkOption = {
   enabled: [true, false],
   error: [true, false],
-  interval: [1500, 2000],
+  interval: [1000, 1000],
   tolerance: [3, 3]
 }
 
@@ -40,7 +40,7 @@ export function setInspectorOption(option) {
 /**
  * Normally, one dispatch means one response.
  * Inspector will check Is the number of dispatch consistent with the number of response.
- * In productin environent,enabled by default, it will throw errro if not.
+ * In productin environent,enabled by default, it will throw error if not.
  * In development environent,disabeld by default.
  */
 export default function createInspector() {

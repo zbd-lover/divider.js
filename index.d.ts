@@ -47,7 +47,7 @@ export interface Processor {
   (action: ActionWithPayload<any>, notify: Notify): void;
 }
 
-export type Tag = "before" | 0 | "0" | "after" | 1 | "1";
+export type Tag = "before" | 0 | "0" | "after" | 1 | "1" | "2" | "create" | 2;
 
 declare interface SourceCreator {
   (processor: Processor, discrete: boolean): Source

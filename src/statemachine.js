@@ -6,7 +6,10 @@ const indexMap = [
   ["0", 0],
   ["after", 1],
   [1, 1],
-  ["1", 1]
+  ["1", 1],
+  ["create", 2],
+  ["2", 2],
+  [2, 2]
 ];
 
 function transformIndex(key) {
@@ -24,16 +27,19 @@ function transformIndex(key) {
   ["after", 1],
   [1, 1],
   ["1", 1].
+  ["create", 2]
+  ["2", 2]
+  [2, 2]
   Matchs value by tag
   if none, throw error.
- * @param {"before" | 0 | "0" | "after" | "1" | 1} tag as index
+ * @param {"before" | 0 | "0" | "after" | "1" | 1 | "create" | "2" | 2} tag as index
  * @returns {number} indexed value
  */
 export function validateTag(tag) {
   let index = transformIndex(tag);
-  if (_typeof(tag) === 'undefined') {
+  if (_typeof(index) === 'undefined') {
     throw new Error(`
-      Invalid tag.Expected: "before", "0", 0, "after", "1", 1. Instead, received: ${tag}
+      Invalid tag.Expected: "before", "0", 0, "after", "1", 1, "create", "2", 2. Instead, received: ${tag}
     `)
   }
   return index;
@@ -43,6 +49,7 @@ export function validateTag(tag) {
  * Creates a state machine when a action is dispatched.
  * Each action should own respective state machine,
  * so we can be able to observe status of each task.
+ * @param {string} target user
  * @param {number} number
  * We can add hook into pos 0 or pos 1, hooks of pos 0 always called before hooks of pos 1.
  * So wen can ensure priority of each hook.
@@ -52,14 +59,16 @@ export function validateTag(tag) {
  * The startWork and endWork is used for marking state machine's status.
  * The hook let's do something before state machine works or after worked.
  */
-export default function creatStateMachine(number) {
-  // 0 -> before, 1 -> after
-  const hooks = [[], []];
+export default function creatStateMachine(target, number) {
+  // 0 -> before, 1 -> after 2 -> create
+  const hooks = [[], [], []];
+  let name = target;
   let processing = false;
 
   for (let i = 1; i <= number; i++) {
     hooks[0].push([]);
     hooks[1].push([]);
+    hooks[2].push([]);
   }
 
   function hook(tag, fn, pos) {
@@ -74,7 +83,7 @@ export default function creatStateMachine(number) {
 
   function startWork(action) {
     if (processing) {
-      throw new Error(`SM has started work!`);
+      throw new Error(`SM named ${name} has started work!`);
     }
     processing = true;
     hooks[0].flat().forEach((hook) => hook(action));
@@ -82,11 +91,13 @@ export default function creatStateMachine(number) {
 
   function endWork(datasource, action) {
     if (!processing) {
-      throw new Error(`SM has ended work!`);
+      throw new Error(`SM named ${name} has ended work!`);
     }
     processing = false;
     hooks[1].flat().forEach((hook) => hook(datasource, action));
   }
+
+  setTimeout(() => hooks[2].flat().forEach((hook) => hook(name)));
 
   return {
     hook,

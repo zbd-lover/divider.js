@@ -26,10 +26,15 @@ function createSource(processor, discrete) {
   // Type of action maps its state machine
   const typeMapSM = [];
 
-  // starting and ending of any dispatch can be observed.
+  function hasType(type) {
+    return !!typeMapSM.find((map) => map[0] === type);
+  }
+
+  // starting and ending of any dispatch can be observed, or creating dispatch.
   // observers[0] -> starting
   // observers[1] -> ending
-  const observers = [[], []];
+  // observers[2] -> creating
+  const observers = [[], [], []];
 
   /**
    * Observe dispatch.
@@ -40,35 +45,66 @@ function createSource(processor, discrete) {
   function observe(type, tag, fn) {
     // Function signature looks like observe(tag, fn).
     if (_typeof(tag) === 'function' && _typeof(type) !== 'undefined' && _typeof(fn) === 'undefined') {
-      let index = validateTag(type);
-      observers[index].push(tag)
+      observeAll(type, tag);
       return;
     }
+    return observeOne(type, tag, fn);
+  }
 
-    const couple = typeMapSM.find((couple) => couple[0] === type);
-    if (couple) {
-      let index = validateTag(tag);
-      let isBefore = index === 0;
-      couple[1].hook(
-        tag,
-        (datasource, action) => {
-          if (isBefore) {
-            action = datasource;
-          }
-          if (action.type === type) {
-            if (isBefore) {
-              fn(action);
-            } else {
-              fn(datasource, action);
-            }
-          }
-        },
-        isBefore ? 2 : 1
-      );
+  function observeAll(tag, fn) {
+    let index = validateTag(tag);
+    observers[index].push(fn);
+  }
+
+  const delays = [];
+  function observeOne(type, tag, fn) {
+    if (!hasType(type)) {
+      delays.push({ type, tag, fn });
       return type;
     }
+    const couple = typeMapSM.find((couple) => couple[0] === type);
+    const index = validateTag(tag);
+    const isBefore = index === 0;
+    const isCreate = index === 2;
+    couple[1].hook(
+      tag,
+      (arg1, arg2) => {
+        if (isCreate && arg1 === type) {
+          // fn(type);
+          fn(type);
+          return;
+        }
 
-    console.warn(`Doesn't exist hook for the dispatch with type: ${type}.`);
+        if (isBefore) {
+          arg2 = arg1;
+        }
+
+        if (arg2.type === type) {
+          if (isBefore) {
+            // fn(action);
+            fn(arg2);
+          } else {
+            // fn(dataSource, action)
+            fn(arg1, arg2);
+          }
+        }
+      },
+      isCreate ? 1 : isBefore ? 2 : 1
+    );
+    return type;
+  }
+
+  function tryRunDelay(type) {
+    if (!hasType(type)) {
+      return;
+    }
+    let index = delays.findIndex((delay) => delay.type === type);
+    if (index < 0) {
+      return;
+    }
+    let { tag, fn } = delays.splice(index, 1)[0];
+    observeOne(type, tag, fn);
+    tryRunDelay(type);
   }
 
   // It's used to do index state machie by the type.
@@ -98,7 +134,8 @@ function createSource(processor, discrete) {
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The observer_hook is called always before custom_hook.
     // The system_hook is used for developer to control 'waiting' and something necessary.
-    const sm = creatStateMachine(3);
+    const sm = creatStateMachine(type, 3);
+    observers[2].forEach((fn) => sm.hook("create", fn, 0));
 
     const suid = uid++;
 
@@ -156,6 +193,8 @@ function createSource(processor, discrete) {
 
     typeMapSM.push([type, sm]);
 
+    tryRunDelay(type);
+
     return dispatch;
   }
 
@@ -165,10 +204,6 @@ function createSource(processor, discrete) {
    */
   function createDispatches(...types) {
     return types.map((type) => createDispatch(type));
-  }
-
-  function hasType(type) {
-    return typeMapSM.find((map) => map[0] === type);
   }
 
   function isDiscrete() {

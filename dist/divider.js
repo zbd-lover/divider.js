@@ -30,7 +30,7 @@
   let forkOption = {
     enabled: [true, false],
     error: [true, false],
-    interval: [1500, 2000],
+    interval: [1000, 1000],
     tolerance: [3, 3]
   };
 
@@ -54,7 +54,7 @@
   /**
    * Normally, one dispatch means one response.
    * Inspector will check Is the number of dispatch consistent with the number of response.
-   * In productin environent,enabled by default, it will throw errro if not.
+   * In productin environent,enabled by default, it will throw error if not.
    * In development environent,disabeld by default.
    */
 
@@ -120,7 +120,7 @@
     };
   }
 
-  const indexMap = [["before", 0], [0, 0], ["0", 0], ["after", 1], [1, 1], ["1", 1]];
+  const indexMap = [["before", 0], [0, 0], ["0", 0], ["after", 1], [1, 1], ["1", 1], ["create", 2], ["2", 2], [2, 2]];
 
   function transformIndex(key) {
     const couple = indexMap.filter(item => item[0] === key).map(item => item[1]);
@@ -137,9 +137,12 @@
     ["after", 1],
     [1, 1],
     ["1", 1].
+    ["create", 2]
+    ["2", 2]
+    [2, 2]
     Matchs value by tag
     if none, throw error.
-   * @param {"before" | 0 | "0" | "after" | "1" | 1} tag as index
+   * @param {"before" | 0 | "0" | "after" | "1" | 1 | "create" | "2" | 2} tag as index
    * @returns {number} indexed value
    */
 
@@ -147,8 +150,8 @@
   function validateTag(tag) {
     let index = transformIndex(tag);
 
-    if (_typeof(tag) === 'undefined') {
-      throw new Error("\n      Invalid tag.Expected: \"before\", \"0\", 0, \"after\", \"1\", 1. Instead, received: ".concat(tag, "\n    "));
+    if (_typeof(index) === 'undefined') {
+      throw new Error("\n      Invalid tag.Expected: \"before\", \"0\", 0, \"after\", \"1\", 1, \"create\", \"2\", 2. Instead, received: ".concat(tag, "\n    "));
     }
 
     return index;
@@ -157,6 +160,7 @@
    * Creates a state machine when a action is dispatched.
    * Each action should own respective state machine,
    * so we can be able to observe status of each task.
+   * @param {string} target user
    * @param {number} number
    * We can add hook into pos 0 or pos 1, hooks of pos 0 always called before hooks of pos 1.
    * So wen can ensure priority of each hook.
@@ -167,14 +171,16 @@
    * The hook let's do something before state machine works or after worked.
    */
 
-  function creatStateMachine(number) {
-    // 0 -> before, 1 -> after
-    const hooks = [[], []];
+  function creatStateMachine(target, number) {
+    // 0 -> before, 1 -> after 2 -> create
+    const hooks = [[], [], []];
+    let name = target;
     let processing = false;
 
     for (let i = 1; i <= number; i++) {
       hooks[0].push([]);
       hooks[1].push([]);
+      hooks[2].push([]);
     }
 
     function hook(tag, fn, pos) {
@@ -189,7 +195,7 @@
 
     function startWork(action) {
       if (processing) {
-        throw new Error("SM has started work!");
+        throw new Error("SM named ".concat(name, " has started work!"));
       }
 
       processing = true;
@@ -198,13 +204,14 @@
 
     function endWork(datasource, action) {
       if (!processing) {
-        throw new Error("SM has ended work!");
+        throw new Error("SM named ".concat(name, " has ended work!"));
       }
 
       processing = false;
       hooks[1].flat().forEach(hook => hook(datasource, action));
     }
 
+    setTimeout(() => hooks[2].flat().forEach(hook => hook(name)));
     return {
       hook,
       startWork,
@@ -233,11 +240,17 @@
 
     let waiting = false; // Type of action maps its state machine
 
-    const typeMapSM = []; // starting and ending of any dispatch can be observed.
+    const typeMapSM = [];
+
+    function hasType(type) {
+      return !!typeMapSM.find(map => map[0] === type);
+    } // starting and ending of any dispatch can be observed, or creating dispatch.
     // observers[0] -> starting
     // observers[1] -> ending
+    // observers[2] -> creating
 
-    const observers = [[], []];
+
+    const observers = [[], [], []];
     /**
      * Observe dispatch.
      * @param {string} type  whom we observe
@@ -248,33 +261,75 @@
     function observe(type, tag, fn) {
       // Function signature looks like observe(tag, fn).
       if (_typeof(tag) === 'function' && _typeof(type) !== 'undefined' && _typeof(fn) === 'undefined') {
-        let index = validateTag(type);
-        observers[index].push(tag);
+        observeAll(type, tag);
         return;
       }
 
-      const couple = typeMapSM.find(couple => couple[0] === type);
+      return observeOne(type, tag, fn);
+    }
 
-      if (couple) {
-        let index = validateTag(tag);
-        let isBefore = index === 0;
-        couple[1].hook(tag, (datasource, action) => {
-          if (isBefore) {
-            action = datasource;
-          }
+    function observeAll(tag, fn) {
+      let index = validateTag(tag);
+      observers[index].push(fn);
+    }
 
-          if (action.type === type) {
-            if (isBefore) {
-              fn(action);
-            } else {
-              fn(datasource, action);
-            }
-          }
-        }, isBefore ? 2 : 1);
+    const delays = [];
+
+    function observeOne(type, tag, fn) {
+      if (!hasType(type)) {
+        delays.push({
+          type,
+          tag,
+          fn
+        });
         return type;
       }
 
-      console.warn("Doesn't exist hook for the dispatch with type: ".concat(type, "."));
+      const couple = typeMapSM.find(couple => couple[0] === type);
+      const index = validateTag(tag);
+      const isBefore = index === 0;
+      const isCreate = index === 2;
+      couple[1].hook(tag, (arg1, arg2) => {
+        if (isCreate && arg1 === type) {
+          // fn(type);
+          fn(type);
+          return;
+        }
+
+        if (isBefore) {
+          arg2 = arg1;
+        }
+
+        if (arg2.type === type) {
+          if (isBefore) {
+            // fn(action);
+            fn(arg2);
+          } else {
+            // fn(dataSource, action)
+            fn(arg1, arg2);
+          }
+        }
+      }, isCreate ? 1 : isBefore ? 2 : 1);
+      return type;
+    }
+
+    function tryRunDelay(type) {
+      if (!hasType(type)) {
+        return;
+      }
+
+      let index = delays.findIndex(delay => delay.type === type);
+
+      if (index < 0) {
+        return;
+      }
+
+      let {
+        tag,
+        fn
+      } = delays.splice(index, 1)[0];
+      observeOne(type, tag, fn);
+      tryRunDelay(type);
     } // It's used to do index state machie by the type.
     // Inspector uses it to know who is processing, too.
 
@@ -301,7 +356,8 @@
       // The system_hook is used for developer to control 'waiting' and something necessary.
 
 
-      const sm = creatStateMachine(3);
+      const sm = creatStateMachine(type, 3);
+      observers[2].forEach(fn => sm.hook("create", fn, 0));
       const suid = uid++; // system hook
 
       sm.hook('after', () => {
@@ -347,6 +403,7 @@
       }
 
       typeMapSM.push([type, sm]);
+      tryRunDelay(type);
       return dispatch;
     }
     /**
@@ -361,10 +418,6 @@
       }
 
       return types.map(type => createDispatch(type));
-    }
-
-    function hasType(type) {
-      return typeMapSM.find(map => map[0] === type);
     }
 
     function isDiscrete() {

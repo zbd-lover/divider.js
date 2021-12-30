@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script src="./divider.js"></script>
+  <script>
+    const processor = (action, notify) => {
+      console.log('received: ', action);
+      notify();
+    }
+
+    const source = divider.createSource(processor);
+
+    source.observe("add", 2, (type) => {
+      console.log(type, '被创建, private');
+    })
+
+    source.observe(2, (type) => {
+      console.log(type, "被创建, middleware");
+    });
+
+    source.observe("add", 0, () => { console.log('start') })
+    source.observe("add", 1, () => { console.log('end') })
+
+    const add = source.createDispatch("add");
+  </script>
+</body>
+
+</html>

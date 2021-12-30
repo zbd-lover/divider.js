@@ -118,20 +118,21 @@ function createDispatched(...types:string): Dispatch[];
 ```
 
 ``` javascript
-function observe(type:string, tag: "0" | "before" | 0 | "1" | "after" | 1 , fn: Function): type
+function observe(type:string, tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "create" | 2 , fn: Function): type
 ```
 +  *type*: Whom our target is, usually be parameter called type of `createDisptach`.
-+  *tag* : What time we observe one action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter.
++  *tag* : What time we observe one action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe creating of action.
 +  *fn*  : What we do, at time one action is observed on specified time. If at "before", accepts one param called action, otherwise , two parameters called data source and action.
 +  *type*: value of param called type.
 
 ``` javascript
-function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 , fn: Function): void;
+function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "create" | 2 , fn: Function): void;
 ```
 
-+  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter.
++  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe creating of action.
 +  *fn*  : What we do, at time any action is observed on specified time. If at "before", accepts one parameter called action, otherwise , two parameters called data source and action.
-+  *note*: Let's associate with middleware.
++  *note1*: Let's associate with middleware.
++  *note2*: We can pre-observe action before creating.
 
 # Final
 Please understand my expressing of English.

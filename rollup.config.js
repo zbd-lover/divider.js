@@ -26,5 +26,9 @@ export default {
   ],
   'plugins': [
     babel({ babelHelpers: 'bundled' }),
+  ],
+  "external": [
+    "core-js/modules/es.array.flat.js",
+    "core-js/modules/es.array.unscopables.flat.js"
   ]
 }
