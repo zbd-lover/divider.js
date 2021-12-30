@@ -132,7 +132,7 @@ function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "create" | 
 +  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe creating of action.
 +  *fn*  : What we do, at time any action is observed on specified time. If at "before", accepts one parameter called action, otherwise , two parameters called data source and action.
 +  *note1*: Let's associate with middleware.
-+  *note2*: We can pre-observe action before creating.
++  *note2*: We can pre-observe action before creating, the observation of its creating  will let's down after one action is created.
 
 # Final
 Please understand my expressing of English.

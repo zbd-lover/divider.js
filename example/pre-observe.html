@@ -18,18 +18,27 @@
 
     const source = divider.createSource(processor);
 
-    source.observe("add", 2, (type) => {
-      console.log(type, '被创建, private');
-    })
-
     source.observe(2, (type) => {
       console.log(type, "被创建, middleware");
     });
+
+    source.observe("add", 2, (type) => {
+      console.log(type, '被创建, private1');
+    })
 
     source.observe("add", 0, () => { console.log('start') })
     source.observe("add", 1, () => { console.log('end') })
 
     const add = source.createDispatch("add");
+
+    // Observes creating of action after created isn't okay.
+    setTimeout(() => {
+      source.observe("add", 2, (type) => {
+        console.log(type, '被创建, private');
+      })
+    }, 50)
+
+
   </script>
 </body>
 

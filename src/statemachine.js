@@ -59,7 +59,7 @@ export function validateTag(tag) {
  * The startWork and endWork is used for marking state machine's status.
  * The hook let's do something before state machine works or after worked.
  */
-export default function creatStateMachine(target, number) {
+export default function creatStateMachine(target, number, effect) {
   // 0 -> before, 1 -> after 2 -> create
   const hooks = [[], [], []];
   let name = target;
@@ -97,11 +97,14 @@ export default function creatStateMachine(target, number) {
     hooks[1].flat().forEach((hook) => hook(datasource, action));
   }
 
-  setTimeout(() => hooks[2].flat().forEach((hook) => hook(name)));
-
-  return {
+  const sm = {
     hook,
     startWork,
     endWork
   }
+
+  effect(sm);
+  hooks[2].flat().forEach((hook) => hook(name));
+
+  return sm;
 }

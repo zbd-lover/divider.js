@@ -62,8 +62,8 @@ function createSource(processor, discrete) {
       delays.push({ type, tag, fn });
       return type;
     }
-    const couple = typeMapSM.find((couple) => couple[0] === type);
     const index = validateTag(tag);
+    const couple = typeMapSM.find((couple) => couple[0] === type);
     const isBefore = index === 0;
     const isCreate = index === 2;
     couple[1].hook(
@@ -134,8 +134,11 @@ function createSource(processor, discrete) {
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The observer_hook is called always before custom_hook.
     // The system_hook is used for developer to control 'waiting' and something necessary.
-    const sm = creatStateMachine(type, 3);
-    observers[2].forEach((fn) => sm.hook("create", fn, 0));
+    const sm = creatStateMachine(type, 3, (sm) => {
+      observers[2].forEach((fn) => sm.hook("create", fn, 0));
+      typeMapSM.push([type, sm]);
+      tryRunDelay(type);
+    });
 
     const suid = uid++;
 
@@ -190,10 +193,6 @@ function createSource(processor, discrete) {
       sm.startWork(action);
       processor(action, createNotify(action));
     }
-
-    typeMapSM.push([type, sm]);
-
-    tryRunDelay(type);
 
     return dispatch;
   }

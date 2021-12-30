@@ -168,7 +168,7 @@ var divider = (function (exports) {
    * The hook let's do something before state machine works or after worked.
    */
 
-  function creatStateMachine(target, number) {
+  function creatStateMachine(target, number, effect) {
     // 0 -> before, 1 -> after 2 -> create
     const hooks = [[], [], []];
     let name = target;
@@ -208,12 +208,14 @@ var divider = (function (exports) {
       hooks[1].flat().forEach(hook => hook(datasource, action));
     }
 
-    setTimeout(() => hooks[2].flat().forEach(hook => hook(name)));
-    return {
+    const sm = {
       hook,
       startWork,
       endWork
     };
+    effect(sm);
+    hooks[2].flat().forEach(hook => hook(name));
+    return sm;
   }
 
   /**
@@ -282,8 +284,8 @@ var divider = (function (exports) {
         return type;
       }
 
-      const couple = typeMapSM.find(couple => couple[0] === type);
       const index = validateTag(tag);
+      const couple = typeMapSM.find(couple => couple[0] === type);
       const isBefore = index === 0;
       const isCreate = index === 2;
       couple[1].hook(tag, (arg1, arg2) => {
@@ -353,8 +355,11 @@ var divider = (function (exports) {
       // The system_hook is used for developer to control 'waiting' and something necessary.
 
 
-      const sm = creatStateMachine(type, 3);
-      observers[2].forEach(fn => sm.hook("create", fn, 0));
+      const sm = creatStateMachine(type, 3, sm => {
+        observers[2].forEach(fn => sm.hook("create", fn, 0));
+        typeMapSM.push([type, sm]);
+        tryRunDelay(type);
+      });
       const suid = uid++; // system hook
 
       sm.hook('after', () => {
@@ -399,8 +404,6 @@ var divider = (function (exports) {
         processor(action, createNotify(action));
       }
 
-      typeMapSM.push([type, sm]);
-      tryRunDelay(type);
       return dispatch;
     }
     /**
