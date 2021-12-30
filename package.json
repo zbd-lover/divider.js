@@ -1,6 +1,6 @@
 {
   "name": "divider.js",
-  "version": "2.4.7",
+  "version": "2.4.8",
   "description": "Let's divide our external data, bridge each one easily.",
   "main": "lib/divider.js",
   "module": "es/divider.js",
