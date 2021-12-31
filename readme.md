@@ -4,6 +4,11 @@ Let's divide our external data, bridge each one easily.
 # Installation
 `npm i divider.js`
 
+# Links
+React bindings
++ npm: https://www.npmjs.com/package/react-divider.js
++ git: https://github.com/zbd-lover/react-divider
+
 # Example
 Below example is traditional in web.
 Let's query server's data and update `dom`.
