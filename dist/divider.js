@@ -375,7 +375,7 @@
 
     function createDispatch(type) {
       if (_typeof(type) !== 'string' || !type) {
-        throw new Error("\n        Expected the type as a string and not empty.\n        Instead, type received".concat(_typeof(type), ", value received:").concat(type, "\n      "));
+        throw new Error("\n        Expected the type as a string and not empty.\n        Instead, type received:".concat(_typeof(type), ", value received:").concat(type, "\n      "));
       }
 
       if (typeMapSM.find(function (map) {
