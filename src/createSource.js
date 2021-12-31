@@ -122,7 +122,7 @@ function createSource(processor, discrete) {
     if (_typeof(type) !== 'string' || !type) {
       throw new Error(`
         Expected the type as a string and not empty.
-        Instead, type received${_typeof(type)}, value received:${type}
+        Instead, type received:${_typeof(type)}, value received:${type}
       `);
     }
 
