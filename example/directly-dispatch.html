@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script src="./divider.js"></script>
+  <script>
+    const makeProcessor = () => {
+      const data = [
+        {
+          id: 1,
+          name: "person1",
+          age: 123,
+          color: "red"
+        }
+      ];
+
+      const add = (obj) => {
+        let sum = 0;
+        for (let i = 1; i < 500000; i++) {
+          sum += 2;
+        }
+        data.push(obj);
+      }
+
+      const del = (payload) => {
+        let index = data.findIndex((o) => o.id === payload.id);
+        if (index >= 0) {
+          data.splice(index, 1);
+        }
+      }
+
+      const query = () => data;
+
+      return (action, notify) => {
+        let { type, payload } = action;
+        switch (type) {
+          case 'create':
+            add(payload);
+            break;
+          case 'del':
+            del(payload);
+            break;
+          default:
+            break;
+        }
+        notify(query());
+      }
+    }
+
+    const source = divider.createSource(makeProcessor(), false);
+
+    source.observe("add", 1, (ds, action) => {
+      console.log('add', ds, action);
+    });
+
+    const add = source.dispatch({
+      type: "add",
+      payload: {
+        id: "123"
+      }
+    });
+    // add();
+
+    // setTimeout(() => {
+    //   source.dispatch({
+    //     type: "add",
+    //     payload: {
+    //       id: "123"
+    //     }
+    //   });
+    // }, 1000)
+  </script>
+</body>
+
+</html>

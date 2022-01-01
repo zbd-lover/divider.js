@@ -111,6 +111,12 @@ const source:Source = createSource((a, b) => {}, true);
 ```
 
 ``` javascript
+// If exists one dispatch that is bound with 'action.type', then call and return it.
+// otherwise creates a new dispatch with action.type, then call and return it.
+function dispatch(action:Action): Dispatch
+```
+
+``` javascript
 // creates a function that dispatches specific task to our processor.
 function createDispatch(type: string): Dispatch
 ```

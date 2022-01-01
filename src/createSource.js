@@ -23,11 +23,18 @@ function createSource(processor, discrete) {
    */
   let waiting = false;
 
-  // Type of action maps its state machine
-  const typeMapSM = [];
+  // item: [type, state machine, dispatch];
+  const groups = [];
 
   function hasType(type) {
-    return !!typeMapSM.find((map) => map[0] === type);
+    return !!groups.find((group) => group[0] === type);
+  }
+
+  function getDispatch(type) {
+    const group  = groups.find((group) => group[0] === type);
+    if (group) {
+      return group[2];
+    }
   }
 
   // starting and ending of any dispatch can be observed, or creating dispatch.
@@ -63,7 +70,7 @@ function createSource(processor, discrete) {
       return type;
     }
     const index = validateTag(tag);
-    const couple = typeMapSM.find((couple) => couple[0] === type);
+    const couple = groups.find((couple) => couple[0] === type);
     const isBefore = index === 0;
     const isCreate = index === 2;
     couple[1].hook(
@@ -126,8 +133,27 @@ function createSource(processor, discrete) {
       `);
     }
 
-    if (typeMapSM.find((map) => map[0] === type)) {
+    if (hasType(type)) {
       throw new Error(`The type has existed: ${type}`);
+    }
+
+    const createNotify = (action) => (datasource) => sm.endWork(datasource, action);
+
+    function dispatch(payload) {
+      if (!discrete && waiting) {
+        throw new Error(`
+          Can\'t dispatch action while sequence source is being processed,
+          if 'discrete dispatch' is expected, pass 'true' to parameter
+          called 'discrete' of 'createSource'.
+          The current type is ${type}.
+        `);
+      }
+      const action = {
+        type,
+        payload
+      }
+      sm.startWork(action);
+      processor(action, createNotify(action));
     }
 
     // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
@@ -136,7 +162,7 @@ function createSource(processor, discrete) {
     // The system_hook is used for developer to control 'waiting' and something necessary.
     const sm = creatStateMachine(type, 3, (sm) => {
       observers[2].forEach((fn) => sm.hook("create", fn, 0));
-      typeMapSM.push([type, sm]);
+      groups.push([type, sm, dispatch]);
       tryRunDelay(type);
     });
 
@@ -157,9 +183,6 @@ function createSource(processor, discrete) {
     );
     // observers hook
     observers[1].forEach((fn) => sm.hook("after", fn, 0));
-
-    const createNotify = (action) => (datasource) => sm.endWork(datasource, action);
-
     // system hook
     sm.hook(
       "before",
@@ -176,23 +199,6 @@ function createSource(processor, discrete) {
     );
     // observers hook
     observers[0].forEach((fn) => sm.hook("before", fn, 1));
-
-    function dispatch(payload) {
-      if (!discrete && waiting) {
-        throw new Error(`
-          Can\'t dispatch action while sequence source is being processed,
-          if 'discrete dispatch' is expected, pass 'true' to parameter
-          called 'discrete' of 'createSource'.
-          The current type is ${type}.
-        `);
-      }
-      const action = {
-        type,
-        payload
-      }
-      sm.startWork(action);
-      processor(action, createNotify(action));
-    }
 
     return dispatch;
   }
@@ -213,11 +219,26 @@ function createSource(processor, discrete) {
     return waiting;
   }
 
+  /**
+   * @param {Action} action 
+   */
+  function dispatch(action) {
+    let dispatch;
+    if (hasType(action.type)) {
+      dispatch = getDispatch(action.type)
+    } else {
+      dispatch = createDispatch(action.type);
+    }
+    dispatch(action.payload);
+    return dispatch;
+  }
+
   return {
     observe,
     isDiscrete,
     isWaiting,
     hasType,
+    dispatch,
     createDispatch,
     createDispatches,
   }

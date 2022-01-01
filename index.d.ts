@@ -27,7 +27,7 @@ export function DispatchesCreator<T, U, S, E>(t1: string, t2: string, t3: string
 export function DispatchesCreator<T, U, S, E, C>(t1: string, t2: string, t3: string, t4: string, t5: string): [Dispatch<T>, Dispatch<U>, Dispatch<S>, Dispatch<E>, Dispatch<C>];
 export function DispatchesCreator<T, U, S, E, C, G>(t1: string, t2: string, t3: string, t4: string, t5: string, t6: string): [Dispatch<T>, Dispatch<U>, Dispatch<S>, Dispatch<E>, Dispatch<C>, Dispatch<G>];
 export function DispatchesCreator<T, U, S, E, C, G, H>(t1: string, t2: string, t3: string, t4: string, t5: string, t7: string): [Dispatch<T>, Dispatch<U>, Dispatch<S>, Dispatch<E>, Dispatch<C>, Dispatch<G>, Dispatch<H>];
-export function DispatchesCreator<T, U, S, E, C, G, H, I>(t1: string, t2: string, t3: string, t4: string, t5: string, t7: string, t8: string): [Dispatch<T>, Dispatch<U>, Dispatch<S>, Dispatch<E>, Dispatch<C>, Dispatch<G>, Dispatch<H>, Dispatch<I>];;
+export function DispatchesCreator<T, U, S, E, C, G, H, I>(t1: string, t2: string, t3: string, t4: string, t5: string, t7: string, t8: string): [Dispatch<T>, Dispatch<U>, Dispatch<S>, Dispatch<E>, Dispatch<C>, Dispatch<G>, Dispatch<H>, Dispatch<I>];
 export function DispatchesCreator(...args: string[]): Dispatch<any>[];
 
 export interface Source {
@@ -37,6 +37,7 @@ export interface Source {
   createDispatches: typeof DispatchesCreator;
   isDiscrete: () => boolean;
   isWaiting: () => boolean;
+  dispatch<T>(action: ActionWithPayload<T>): Dispatch<T>;
 }
 
 export interface Notify {

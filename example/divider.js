@@ -260,14 +260,24 @@ var divider = (function (exports) {
      * otherwise, after action dispatched.
      */
 
-    var waiting = false; // Type of action maps its state machine
+    var waiting = false; // item: [type, state machine, dispatch];
 
-    var typeMapSM = [];
+    var groups = [];
 
     function hasType(type) {
-      return !!typeMapSM.find(function (map) {
-        return map[0] === type;
+      return !!groups.find(function (group) {
+        return group[0] === type;
       });
+    }
+
+    function getDispatch(type) {
+      var group = groups.find(function (group) {
+        return group[0] === type;
+      });
+
+      if (group) {
+        return group[2];
+      }
     } // starting and ending of any dispatch can be observed, or creating dispatch.
     // observers[0] -> starting
     // observers[1] -> ending
@@ -310,7 +320,7 @@ var divider = (function (exports) {
       }
 
       var index = validateTag(tag);
-      var couple = typeMapSM.find(function (couple) {
+      var couple = groups.find(function (couple) {
         return couple[0] === type;
       });
       var isBefore = index === 0;
@@ -375,10 +385,27 @@ var divider = (function (exports) {
         throw new Error("\n        Expected the type as a string and not empty.\n        Instead, type received:".concat(_typeof(type), ", value received:").concat(type, "\n      "));
       }
 
-      if (typeMapSM.find(function (map) {
-        return map[0] === type;
-      })) {
+      if (hasType(type)) {
         throw new Error("The type has existed: ".concat(type));
+      }
+
+      var createNotify = function createNotify(action) {
+        return function (datasource) {
+          return sm.endWork(datasource, action);
+        };
+      };
+
+      function dispatch(payload) {
+        if (!discrete && waiting) {
+          throw new Error("\n          Can't dispatch action while sequence source is being processed,\n          if 'discrete dispatch' is expected, pass 'true' to parameter\n          called 'discrete' of 'createSource'.\n          The current type is ".concat(type, ".\n        "));
+        }
+
+        var action = {
+          type: type,
+          payload: payload
+        };
+        sm.startWork(action);
+        processor(action, createNotify(action));
       } // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
       // The observe_hook's action like middleware, because it can observe any dispatch of one source.
       // The observer_hook is called always before custom_hook.
@@ -389,7 +416,7 @@ var divider = (function (exports) {
         observers[2].forEach(function (fn) {
           return sm.hook("create", fn, 0);
         });
-        typeMapSM.push([type, sm]);
+        groups.push([type, sm, dispatch]);
         tryRunDelay(type);
       });
       var suid = uid++; // system hook
@@ -406,14 +433,7 @@ var divider = (function (exports) {
 
       observers[1].forEach(function (fn) {
         return sm.hook("after", fn, 0);
-      });
-
-      var createNotify = function createNotify(action) {
-        return function (datasource) {
-          return sm.endWork(datasource, action);
-        };
-      }; // system hook
-
+      }); // system hook
 
       sm.hook("before", function () {
         waiting = true;
@@ -430,20 +450,6 @@ var divider = (function (exports) {
       observers[0].forEach(function (fn) {
         return sm.hook("before", fn, 1);
       });
-
-      function dispatch(payload) {
-        if (!discrete && waiting) {
-          throw new Error("\n          Can't dispatch action while sequence source is being processed,\n          if 'discrete dispatch' is expected, pass 'true' to parameter\n          called 'discrete' of 'createSource'.\n          The current type is ".concat(type, ".\n        "));
-        }
-
-        var action = {
-          type: type,
-          payload: payload
-        };
-        sm.startWork(action);
-        processor(action, createNotify(action));
-      }
-
       return dispatch;
     }
     /**
@@ -469,12 +475,30 @@ var divider = (function (exports) {
     function isWaiting() {
       return waiting;
     }
+    /**
+     * @param {Action} action 
+     */
+
+
+    function dispatch(action) {
+      var dispatch;
+
+      if (hasType(action.type)) {
+        dispatch = getDispatch(action.type);
+      } else {
+        dispatch = createDispatch(action.type);
+      }
+
+      dispatch(action.payload);
+      return dispatch;
+    }
 
     return {
       observe: observe,
       isDiscrete: isDiscrete,
       isWaiting: isWaiting,
       hasType: hasType,
+      dispatch: dispatch,
       createDispatch: createDispatch,
       createDispatches: createDispatches
     };
