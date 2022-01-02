@@ -95,9 +95,9 @@ function createInspector() {
 
     if (suspects.some(function (suspect) {
       return suspect >= option.tolerance;
-    })) {
+    }) && couples.length < life) {
       var text = "\n        You maybe forget to call 'notify' in 'process' function.\n        It's maybe make bad effect for your 'hook for dispatch',\n        or source is 'sequence', yet.\n      ";
-      couples.length = life;
+      destroy();
 
       if (option.error) {
         throw new Error(text);
@@ -115,8 +115,13 @@ function createInspector() {
     couples[index][flag] = flag;
   }
 
+  function destroy() {
+    couples.length = 100;
+  }
+
   return {
-    collect: collect
+    collect: collect,
+    destroy: destroy
   };
 }
 
@@ -189,11 +194,17 @@ function creatStateMachine(target, number, effect) {
   var processing = false;
   var interrupted = false;
 
-  for (var i = 1; i <= number; i++) {
-    hooksMap.forEach(function (hooks) {
-      return hooks.push([]);
-    });
+  function init() {
+    hooksMap = [[], [], [], []];
+
+    for (var i = 1; i <= number; i++) {
+      hooksMap.forEach(function (hooks) {
+        return hooks.push([]);
+      });
+    }
   }
+
+  init();
 
   function hook(tag, fn, pos) {
     var index = validateTag(tag);
@@ -256,8 +267,13 @@ function creatStateMachine(target, number, effect) {
     });
   }
 
+  function reset() {
+    init();
+  }
+
   var sm = {
     hook: hook,
+    reset: reset,
     interrupt: interrupt,
     startWork: startWork,
     endWork: endWork
@@ -272,9 +288,17 @@ function creatStateMachine(target, number, effect) {
 /**
  * 每一个action都有自己对应的state machine,
  * state machine可以被监听，可被监听的时间点有4个: 开始工作前, 结束工作后, 创建时, 打断工作后.
- * 系统内部会进行部分监听，使用者可以对特定的action监听或任意的action监听.
+ * Observe api让我们对action进行监听，实际上我们监听的是对应的state machine.
+ * 系统内部会监听它，同时，使用者可以对特定的action监听或任意的action监听.
  * 监听的回调函数是有顺序的，下面是顺序的描述对象
  * （对任意action监听的回调函数发生在特定action的之前）
+ * ------------------------------------------------
+ * Each action owns respective state machine.
+ * The state machine can be observed, allowed times are: before working, after worked, on creating, after interrupted.
+ * ('Observe api' let us to observe the actions, actually, the state machines are real target.)
+ * We will observe actions inside the system to do something necessary, and user can observe any action or specific action.
+ * Callbacks of observations are order, the follwing is order-object
+ * (Observations of any action  are notified at first, then observations of specific action. )
  */
 
 var HOOK_ORDER_MAP = {
@@ -343,8 +367,8 @@ function createSource(processor, discrete) {
   /**
    * 0 -> before action working.
    * 1 -> after action worked.
-   * 2 -> on action creating.
-   * 3 -> after action interrupted
+   * 2 -> on creating of action.
+   * 3 -> after action interrupted.
    */
 
 
@@ -480,10 +504,8 @@ function createSource(processor, discrete) {
     if (hasType(type)) {
       console.warn("The type has existed: ".concat(type));
       return;
-    } // One action means one state machine, all observers' target is state machine.
-    // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
+    } // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
-    // The observer_hook is called always before custom_hook.
     // The system_hook is used for developer to control 'waiting' and something necessary.
 
 
@@ -614,10 +636,23 @@ function createSource(processor, discrete) {
     console.warn("Doesn't exist the type named ".concat(type, "."));
   }
 
+  function reset() {
+    groups.forEach(function (group) {
+      return group[1].reset();
+    });
+    groups = [];
+    inspector.destroy();
+    inspector = createInspector();
+    delays = [];
+    observers = [];
+    waiting = false;
+  }
+
   return {
     observe: observe,
     isDiscrete: isDiscrete,
     isWaiting: isWaiting,
+    reset: reset,
     hasType: hasType,
     dispatch: dispatch,
     interrupt: interrupt,

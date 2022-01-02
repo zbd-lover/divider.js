@@ -32,13 +32,14 @@ export function DispatchesCreator(...args: string[]): Dispatch<any>[];
 
 export interface Source {
   observe: typeof Observe;
-  hasType: (type: string) => boolean;
   createDispatch<T>(type: string): Dispatch<T>;
   createDispatches: typeof DispatchesCreator;
-  isDiscrete: () => boolean;
-  isWaiting: () => boolean;
   dispatch<T>(action: ActionWithPayload<T>): Dispatch<T>;
   interrupt: (type: string) => void;
+  hasType: (type: string) => boolean;
+  isDiscrete: () => boolean;
+  isWaiting: () => boolean;
+  reset: () => void;
 }
 
 export interface Notify {

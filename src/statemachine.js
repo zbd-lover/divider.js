@@ -70,14 +70,19 @@ function flat(hooks) {
  */
 export default function creatStateMachine(target, number, effect) {
   // 0 -> before, 1 -> after 2 -> create 3 -> interrupt
-  const hooksMap = [[], [], [], []];
+  let hooksMap = [[], [], [], []];
   let name = target;
   let processing = false;
   let interrupted = false;
 
-  for (let i = 1; i <= number; i++) {
-    hooksMap.forEach((hooks) => hooks.push([]));
+  function init() {
+    hooksMap = [[], [], [], []];
+    for (let i = 1; i <= number; i++) {
+      hooksMap.forEach((hooks) => hooks.push([]));
+    }
   }
+
+  init();
 
   function hook(tag, fn, pos) {
     const index = validateTag(tag);
@@ -128,8 +133,13 @@ export default function creatStateMachine(target, number, effect) {
     flat(hooksMap[3]).forEach((hook) => hook(name));
   }
 
+  function reset() {
+    init()
+  }
+
   const sm = {
     hook,
+    reset,
     interrupt,
     startWork,
     endWork

@@ -151,5 +151,10 @@ function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "create" | 
 +  *note2*: We can pre-observe action before creating;Observations of any action must be created before action created;
 Creates observation of action creating after created, it doesn't work.
 
+``` javascript
+// Go back original status.
+function reset(): void;
+```
+
 # Final
 Please understand my expressing of English.

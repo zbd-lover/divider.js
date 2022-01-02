@@ -62,14 +62,14 @@
 
 
     const source = divider.createSource(makeProcessor());
-    const { observe, createDispatch } = source;
+    const { observe, createDispatch, reset } = source;
 
     // observes all action. 
     observe(0, (action) => {
       console.log('action:', action);
     });
 
-    const dispatch = createDispatch('create');
+    const create = createDispatch('create');
 
     // observes specific action.
     observe('create', 0, () => {
@@ -82,13 +82,13 @@
     });
 
     // Param of dispatch is called 'payload'.
-    dispatch({
+    create({
       id: 5,
       name: "1132",
     });
 
     setTimeout(() => {
-      dispatch({
+      create({
         id: 5,
         name: "1132",
       });
@@ -102,6 +102,13 @@
 
     observe("del", 0, () => {
       console.log("I separates with hook for other dispatchs.");
+      reset();
+      setTimeout(() => {
+        create({
+          id: 10,
+          name: "123"
+        })
+      }, 500)
     });
 
 

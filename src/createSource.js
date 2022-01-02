@@ -54,7 +54,7 @@ function createSource(processor, discrete) {
     throw new Error(`Expected the process as a function. Instead, received: ${_typeof(processor)}`);
   }
 
-  const inspector = createInspector();
+  let inspector = createInspector();
 
   /**
    * Can we dispatch the next action right now?
@@ -66,7 +66,7 @@ function createSource(processor, discrete) {
   let waiting = false;
 
   // item: [type, state machine, dispatch];
-  const groups = [];
+  let groups = [];
 
   function hasType(type) {
     return !!groups.find((group) => group[0] === type);
@@ -85,7 +85,7 @@ function createSource(processor, discrete) {
    * 2 -> on creating of action.
    * 3 -> after action interrupted.
    */
-  const observers = [[], [], [], []];
+  let observers = [[], [], [], []];
   /**
    * Observe dispatch.
    * @param {string} type  whom we observe
@@ -106,7 +106,7 @@ function createSource(processor, discrete) {
     observers[index].push(fn);
   }
 
-  const delays = [];
+  let delays = [];
   function observeOne(type, tag, fn) {
     if (!hasType(type)) {
       delays.push({ type, tag, fn });
@@ -327,10 +327,21 @@ function createSource(processor, discrete) {
     console.warn(`Doesn't exist the type named ${type}.`);
   }
 
+  function reset() {
+    groups.forEach((group) => group[1].reset());
+    groups = [];
+    inspector.destroy();
+    inspector = createInspector();
+    delays = [];
+    observers = [];
+    waiting = false;
+  }
+
   return {
     observe,
     isDiscrete,
     isWaiting,
+    reset,
     hasType,
     dispatch,
     interrupt,

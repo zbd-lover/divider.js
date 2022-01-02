@@ -76,13 +76,13 @@ export default function createInspector() {
       suspects[index] = 0;
     });
 
-    if (suspects.some((suspect) => suspect >= option.tolerance)) {
+    if (suspects.some((suspect) => suspect >= option.tolerance) && couples.length < life) {
       const text = `
         You maybe forget to call 'notify' in 'process' function.
         It's maybe make bad effect for your 'hook for dispatch',
         or source is 'sequence', yet.
       `;
-      couples.length = life;
+      destroy()
       if (option.error) {
         throw new Error(text);
       }
@@ -97,7 +97,12 @@ export default function createInspector() {
     couples[index][flag] = flag;
   }
 
+  function destroy() {
+    couples.length = 100;
+  }
+
   return {
     collect,
+    destroy
   }
 }
