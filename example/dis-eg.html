@@ -49,7 +49,7 @@
             break;
         }
         // program will throw error in 4.5 seconds.
-        // notify(await query());
+        notify(await query());
       }
 
       return (action, notify) => {
@@ -65,7 +65,6 @@
       console.log(`${name} is interrupted. public`);
     })
 
-
     observe("before", (action) => {
       console.log(`I am ${action.type}, go to working.`)
     })
@@ -73,14 +72,9 @@
     const dispatchAdd = createDispatch('add');
     const dispatchDel = createDispatch('del');
 
-
     observe("add", 0, (action) => {
       console.log('add1');
     })
-
-    observe("add", 0, (action) => {
-      console.log('add2');
-    });
 
     observe("add", 1, (d, a) => {
       console.log('add action result:', d);
@@ -90,9 +84,24 @@
       console.log(`${name} is interrupted. private`);
     });
 
-    dispatchAdd({ id: 11 });
+    observe("del", 1, (d) => {
+      console.log('deleted ok!');
+    })
 
-    setTimeout(() => interrupt("add"), 1000)
+    dispatchAdd({ id: 11 });
+    // interrupt("add");
+
+    setTimeout(() => {
+      dispatchAdd({ id: 11 });
+      interrupt("add");
+
+      setTimeout(() => {
+        dispatchDel({ id: 11 });
+        interrupt("del");
+      }, 1000);
+    }, 1000);
+
+    // setTimeout(() => interrupt("add"), 1000)
   </script>
 </body>
 

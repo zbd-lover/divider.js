@@ -190,11 +190,10 @@
 
 
   function creatStateMachine(target) {
+    var interactive = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
     // 0 -> before, 1 -> after 2 -> interrupt
     var hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
     var name = target;
-    var processing = false;
-    var interrupted = false;
 
     function hook(tag, fn, pos) {
       var index = validateTag(tag);
@@ -213,73 +212,93 @@
           hooksMap[index][pos][len] = function () {};
         }
       };
-    } // reset status
+    }
 
+    var uid = 1;
 
-    function tryWork() {
-      if (interrupted) {
-        interrupted = false;
+    function createWorkUnit() {
+      var cuid = uid++;
+      var processing;
+      var interrupted = false;
+
+      function startWork(action) {
+        if (interrupted) {
+          return;
+        }
+
+        if (processing) {
+          throw new Error("SM named ".concat(name, " has started work!"));
+        }
+
+        flat(hooksMap[0]).forEach(function (hook) {
+          return hook(action);
+        });
+        processing = true;
+      }
+
+      function endWork(datasource, action) {
+        if (interrupted) {
+          return;
+        }
+
+        if (!processing) {
+          throw new Error("SM named ".concat(name, " has ended work!"));
+        }
+
         processing = false;
-        return false;
+        flat(hooksMap[1]).forEach(function (hook) {
+          return hook(datasource, action);
+        });
       }
 
-      return true;
-    }
+      function interrupt() {
+        if (interrupted && interactive) {
+          console.log("No impact of this interruption, because state machine named ".concat(name, " has interrupted, the uid: ").concat(cuid, "."));
+          return;
+        }
 
-    function startWork(action) {
-      // reset status 
-      if (interrupted) {
-        return;
+        if (!processing && interactive) {
+          if (_typeof(processing) === 'undefined') {
+            console.log("No impact of this interruption, because state machine has not worked, the uid: ".concat(cuid, "."));
+            return;
+          }
+
+          if (_typeof(processing) === 'boolean') {
+            console.log("No impact of this interruption, because state machine has worked, the uid: ".concat(cuid, "."));
+            return;
+          }
+
+          console.log("State Machine can be interrupted only after working or before ended, the uid: ".concat(cuid, "."));
+          return;
+        }
+
+        interrupted = true;
+        processing = false;
+        flat(hooksMap[2]).forEach(function (hook) {
+          return hook(name);
+        });
+
+        if (interactive) {
+          console.log("State Machine named ".concat(name, " is interrupted, the uid: ").concat(cuid, "."));
+          console.log("---------------");
+        }
       }
 
-      if (processing) {
-        throw new Error("SM named ".concat(name, " has started work!"));
-      }
-
-      flat(hooksMap[0]).forEach(function (hook) {
-        return hook(action);
-      });
-      processing = true;
-    }
-
-    function endWork(datasource, action) {
-      // not only resets status, and also skips the 'endwork'.
-      if (!tryWork()) return;
-
-      if (!processing) {
-        throw new Error("SM named ".concat(name, " has ended work!"));
-      }
-
-      processing = false;
-      flat(hooksMap[1]).forEach(function (hook) {
-        return hook(datasource, action);
-      });
-    }
-
-    function interrupt() {
-      if (!processing) {
-        console.warn("State Machine can be interrupted only after working or before ended.");
-        return;
-      }
-
-      interrupted = true;
-      flat(hooksMap[2]).forEach(function (hook) {
-        return hook(name);
-      });
+      return {
+        startWork: startWork,
+        endWork: endWork,
+        interrupt: interrupt
+      };
     }
 
     function reset() {
-      processing = false;
-      interrupted = false;
       hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
     }
 
     return {
       hook: hook,
       reset: reset,
-      interrupt: interrupt,
-      startWork: startWork,
-      endWork: endWork
+      createWorkUnit: createWorkUnit
     };
   }
 
@@ -338,7 +357,7 @@
      * If action is interrupted, right now, sets waiting false;
      */
 
-    var waiting = false; // item: [type, state machine, dispatch];
+    var waiting = false; // item: [type, state machine, dispatch, interrupt];
 
     var groups = [];
 
@@ -350,6 +369,17 @@
       return groups.find(function (group) {
         return group[0] === type;
       });
+    }
+
+    function interrupt(type) {
+      var group = findGroup(type);
+
+      if (group) {
+        group[3]();
+        return;
+      }
+
+      console.warn("Doesn't exist the type named ".concat(type, ". can't interrupt"));
     }
 
     function hasType(type) {
@@ -469,20 +499,34 @@
       // The system_hook is used for developer to control 'waiting' and something necessary.
 
 
-      var sm = creatStateMachine(type); // createDispatch will return it.
+      var sm = creatStateMachine(type);
+      var currentWorkUnit; // createDispatch will return it.
 
       function dispatch(payload) {
         if (!discrete && waiting) {
           throw new Error("\n          Can't dispatch action while sequence source is being processed,\n          if 'discrete dispatch' is expected, pass 'true' to parameter\n          called 'discrete' of 'createSource'.\n          The current type is ".concat(type, ".\n        "));
         }
 
+        if (currentWorkUnit) {
+          currentWorkUnit.interrupt();
+        }
+
+        var workUnit = sm.createWorkUnit();
+        currentWorkUnit = workUnit;
         var action = {
           type: type,
           payload: payload
         };
-        sm.startWork(action);
+        var group = findGroup(type);
+
+        if (group) {
+          // current interrupt
+          group[3] = workUnit.interrupt;
+        }
+
+        workUnit.startWork(action);
         processor(action, function (datasource) {
-          return sm.endWork(datasource, action);
+          return workUnit.endWork(datasource, action);
         });
       }
 
@@ -521,9 +565,8 @@
         return sm.hook("after", fn, HOOK_ORDER_MAP["after"].observer);
       }); // Bind Hooks for 'interrupt'
 
-      sm.hook("interrupt", function (name) {
-        console.log("Action named '".concat(name, "' is interrupted before worked completely.")); // inspector is able to collect 'start' of action, opposite, is not.
-
+      sm.hook("interrupt", function () {
+        // inspector is able to collect 'start' of action, opposite, is not.
         if (inspector) {
           inspector.collect(suid, 1);
         }
@@ -578,20 +621,10 @@
       return dispatch;
     }
 
-    function interrupt(type) {
-      var group = findGroup(type);
-
-      if (group) {
-        group[1].interrupt();
-        return;
-      }
-
-      console.warn("Doesn't exist the type named ".concat(type, ". can't interrupt"));
-    }
-
     function reset() {
       groups.forEach(function (group) {
-        return group[1].reset();
+        group[3]();
+        group[1].reset();
       });
       groups = [];
 

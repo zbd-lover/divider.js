@@ -61,12 +61,10 @@ function flat(hooks) {
  * The startWork and endWork is used for marking state machine's status.
  * The hook let's do something before state machine works or after worked.
  */
-export default function creatStateMachine(target) {
+export default function creatStateMachine(target, interactive = true) {
   // 0 -> before, 1 -> after 2 -> interrupt
   let hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   let name = target;
-  let processing = false;
-  let interrupted = false;
 
   function hook(tag, fn, pos) {
     let index = validateTag(tag);
@@ -86,58 +84,72 @@ export default function creatStateMachine(target) {
     }
   }
 
-  // reset status
-  function tryWork() {
-    if (interrupted) {
-      interrupted = false;
+  let uid = 1;
+  function createWorkUnit() {
+    let cuid = uid++;
+    let processing;
+    let interrupted = false;
+    function startWork(action) {
+      if (interrupted) {
+        return;
+      }
+      if (processing) {
+        throw new Error(`SM named ${name} has started work!`);
+      }
+      flat(hooksMap[0]).forEach((hook) => hook(action));
+      processing = true;
+    }
+    function endWork(datasource, action) {
+      if (interrupted) {
+        return;
+      }
+      if (!processing) {
+        throw new Error(`SM named ${name} has ended work!`);
+      }
       processing = false;
-      return false;
-    }
-    return true
-  }
+      flat(hooksMap[1]).forEach((hook) => hook(datasource, action));
+    };
 
-  function startWork(action) {
-    // reset status 
-    if (interrupted) {
-      return;
+    function interrupt() {
+      if (interrupted && interactive) {
+        console.log(`No impact of this interruption, because state machine named ${name} has interrupted, the uid: ${cuid}.`)
+        return;
+      }
+      if (!processing && interactive) {
+        if (_typeof(processing) === 'undefined') {
+          console.log(`No impact of this interruption, because state machine has not worked, the uid: ${cuid}.`);
+          return;
+        }
+        if (_typeof(processing) === 'boolean') {
+          console.log(`No impact of this interruption, because state machine has worked, the uid: ${cuid}.`);
+          return;
+        }
+        console.log(`State Machine can be interrupted only after working or before ended, the uid: ${cuid}.`);
+        return;
+      }
+      interrupted = true;
+      processing = false
+      flat(hooksMap[2]).forEach((hook) => hook(name));
+      if (interactive) {
+        console.log(`State Machine named ${name} is interrupted, the uid: ${cuid}.`);
+        console.log(`---------------`);
+      }
     }
-    if (processing) {
-      throw new Error(`SM named ${name} has started work!`);
-    }
-    flat(hooksMap[0]).forEach((hook) => hook(action));
-    processing = true;
-  }
 
-  function endWork(datasource, action) {
-    // not only resets status, and also skips the 'endwork'.
-    if (!tryWork()) return;
-    if (!processing) {
-      throw new Error(`SM named ${name} has ended work!`);
+    return {
+      startWork,
+      endWork,
+      interrupt
     }
-    processing = false;
-    flat(hooksMap[1]).forEach((hook) => hook(datasource, action));
-  }
-
-  function interrupt() {
-    if (!processing) {
-      console.warn(`State Machine can be interrupted only after working or before ended.`);
-      return;
-    }
-    interrupted = true;
-    flat(hooksMap[2]).forEach((hook) => hook(name));
   }
 
   function reset() {
-    processing = false;
-    interrupted = false;
     hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   }
 
   return {
     hook,
     reset,
-    interrupt,
-    startWork,
-    endWork
+    createWorkUnit
   };
 }

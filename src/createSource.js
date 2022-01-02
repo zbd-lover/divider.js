@@ -60,7 +60,7 @@ function createSource(processor, discrete) {
    */
   let waiting = false;
 
-  // item: [type, state machine, dispatch];
+  // item: [type, state machine, dispatch, interrupt];
   let groups = [];
 
   function record(type, sm, dispatch) {
@@ -69,6 +69,15 @@ function createSource(processor, discrete) {
 
   function findGroup(type) {
     return groups.find((group) => group[0] === type)
+  }
+
+  function interrupt(type) {
+    let group = findGroup(type);
+    if (group) {
+      group[3]();
+      return;
+    }
+    console.warn(`Doesn't exist the type named ${type}. can't interrupt`);
   }
 
   function hasType(type) {
@@ -183,7 +192,7 @@ function createSource(processor, discrete) {
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The system_hook is used for developer to control 'waiting' and something necessary.
     let sm = creatStateMachine(type);
-
+    let currentWorkUnit;
     // createDispatch will return it.
     function dispatch(payload) {
       if (!discrete && waiting) {
@@ -194,12 +203,23 @@ function createSource(processor, discrete) {
           The current type is ${type}.
         `);
       }
+      if (currentWorkUnit) {
+        currentWorkUnit.interrupt();
+      }
+      let workUnit = sm.createWorkUnit();
+      currentWorkUnit = workUnit;
       let action = {
         type,
         payload
       }
-      sm.startWork(action);
-      processor(action, (datasource) => sm.endWork(datasource, action));
+      let group = findGroup(type);
+      if (group) {
+        // current interrupt
+        group[3] = (workUnit.interrupt);
+      }
+
+      workUnit.startWork(action);
+      processor(action, (datasource) => workUnit.endWork(datasource, action));
     }
 
     let suid = uid++;
@@ -244,8 +264,7 @@ function createSource(processor, discrete) {
     // Bind Hooks for 'interrupt'
     sm.hook(
       "interrupt",
-      (name) => {
-        console.log(`Action named '${name}' is interrupted before worked completely.`);
+      () => {
         // inspector is able to collect 'start' of action, opposite, is not.
         if (inspector) {
           inspector.collect(suid, 1);
@@ -258,7 +277,7 @@ function createSource(processor, discrete) {
     // observers' hooks
     observers[2].forEach((fn) => sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer));
 
-    record(type, sm, dispatch);
+    record(type, sm, dispatch, () => { });
     return dispatch;
   }
 
@@ -292,17 +311,11 @@ function createSource(processor, discrete) {
     return dispatch;
   }
 
-  function interrupt(type) {
-    let group = findGroup(type);
-    if (group) {
-      group[1].interrupt();
-      return;
-    }
-    console.warn(`Doesn't exist the type named ${type}. can't interrupt`);
-  }
-
   function reset() {
-    groups.forEach((group) => group[1].reset());
+    groups.forEach((group) => {
+      group[3]();
+      group[1].reset();
+    });
     groups = [];
     if (inspector) {
       inspector.destroy();
