@@ -387,16 +387,7 @@
 
     function observeAll(tag, fn) {
       var index = validateTag(tag);
-      var len = observers[index].length;
       observers[index].push(fn);
-      var released = false;
-      return function () {
-        if (!released && observers[index].length >= len) {
-          released = true;
-
-          observers[index][len] = function () {};
-        }
-      };
     }
 
     function observeOne(type, tag, fn) {

@@ -104,15 +104,7 @@ function createSource(processor, discrete) {
 
   function observeAll(tag, fn) {
     let index = validateTag(tag);
-    let len = observers[index].length;
     observers[index].push(fn);
-    let released = false;
-    return () => {
-      if (!released && observers[index].length >= len) {
-        released = true;
-        observers[index][len] = () => { }
-      }
-    }
   }
 
   function observeOne(type, tag, fn) {
