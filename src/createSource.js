@@ -4,14 +4,14 @@ import creatStateMachine, { validateTag } from "./statemachine";
 
 /**
  * 每一个action都有自己对应的state machine,
- * state machine可以被监听，可被监听的时间点有4个: 开始工作前, 结束工作后, 创建时, 打断工作后.
+ * state machine可以被监听，可被监听的时间点有4个: 开始工作前, 结束工作后, 打断工作后.
  * Observe api让我们对action进行监听，实际上我们监听的是对应的state machine.
  * 系统内部会监听它，同时，使用者可以对特定的action监听或任意的action监听.
  * 监听的回调函数是有顺序的，下面是顺序的描述对象
  * （对任意action监听的回调函数发生在特定action的之前）
  * ------------------------------------------------
  * Each action owns respective state machine.
- * The state machine can be observed, allowed times are: before working, after worked, on creating, after interrupted.
+ * The state machine can be observed, allowed times are: before working, after worked, after interrupted.
  * ('Observe api' let us to observe the actions, actually, the state machines are real target.)
  * We will observe actions inside the system to do something necessary, and user can observe any action or specific action.
  * Callbacks of observations are order, the follwing is order-object
@@ -30,11 +30,6 @@ const HOOK_ORDER_MAP = {
     observer: 0,
     user: 1,
     system: 2,
-  },
-  create: {
-    system: 0,
-    observer: 1,
-    user: 2,
   },
   interrupt: {
     observer: 0,
@@ -68,12 +63,20 @@ function createSource(processor, discrete) {
   // item: [type, state machine, dispatch];
   let groups = [];
 
+  function record(type, sm, dispatch) {
+    groups.push([type, sm, dispatch]);
+  }
+
+  function findGroup(type) {
+    return groups.find((group) => group[0] === type)
+  }
+
   function hasType(type) {
-    return !!groups.find((group) => group[0] === type);
+    return !!findGroup(type);
   }
 
   function getDispatch(type) {
-    const group = groups.find((group) => group[0] === type);
+    let group = findGroup(type)
     if (group) {
       return group[2];
     }
@@ -82,10 +85,9 @@ function createSource(processor, discrete) {
   /**
    * 0 -> before action working.
    * 1 -> after action worked.
-   * 2 -> on creating of action.
-   * 3 -> after action interrupted.
+   * 2 -> after action interrupted.
    */
-  let observers = [[], [], [], []];
+  let observers = [[], [], []];
   /**
    * Observe dispatch.
    * @param {string} type  whom we observe
@@ -95,54 +97,52 @@ function createSource(processor, discrete) {
   function observe(type, tag, fn) {
     // Function signature looks like observe(tag, fn).
     if (_typeof(tag) === 'function' && _typeof(type) !== 'undefined' && _typeof(fn) === 'undefined') {
-      observeAll(type, tag);
-      return;
+      return observeAll(type, tag);
     }
     return observeOne(type, tag, fn);
   }
 
   function observeAll(tag, fn) {
     let index = validateTag(tag);
+    let len = observers[index].length;
     observers[index].push(fn);
+    let released = false;
+    return () => {
+      if (!released && observers[index].length >= len) {
+        released = true;
+        observers[index][len] = () => { }
+      }
+    }
   }
 
-  let delays = [];
   function observeOne(type, tag, fn) {
     if (!hasType(type)) {
-      delays.push({ type, tag, fn });
-      return type;
+      console.warn(`Cant't observe action before created, the action's type is ${type}.`);
+      return;
     }
-    const index = validateTag(tag);
-    const couple = groups.find((couple) => couple[0] === type);
-    let pos = 0;
+    let index = validateTag(tag);
+    let group = groups.find((group) => group[0] === type);
+    let positon = 0;
     switch (index) {
-      // before
       case 0:
-        pos = HOOK_ORDER_MAP['before'].user;
+        positon = HOOK_ORDER_MAP['before'].user;
         break;
-      // after
       case 1:
-        pos = HOOK_ORDER_MAP['after'].user;
+        positon = HOOK_ORDER_MAP['after'].user;
         break;
-      // create
       case 2:
-        pos = HOOK_ORDER_MAP['create'].user;
-        break;
-      // interrupt
-      case 3:
-        pos = HOOK_ORDER_MAP['interrupt'].user;
+        positon = HOOK_ORDER_MAP['interrupt'].user;
         break;
       default:
         break;
     }
-    couple[1].hook(
+    return group[1].hook(
       tag,
       (arg1, arg2) => {
         let isBefore = index === 0;
         let isAfter = index === 1;
-        let isCreate = index === 2;
-        let isInterrupt = index == 3;
-        if ((isCreate || isInterrupt) && arg1 === type) {
+        let isInterrupt = index == 2;
+        if (isInterrupt && arg1 === type) {
           // fn(action.type)
           fn(type);
           return;
@@ -159,23 +159,8 @@ function createSource(processor, discrete) {
         }
         console.warn(`Unknown index: ${index}, this means unknown hook.`);
       },
-      pos
+      positon
     );
-    return type;
-  }
-
-  function tryRunDelay(type) {
-    if (!hasType(type)) {
-      return;
-    }
-    let index = delays.findIndex((delay) => delay.type === type);
-    if (index < 0) {
-      return;
-    }
-    let { tag, fn } = delays.splice(index, 1)[0];
-    observeOne(type, tag, fn);
-    // It's possible that one type's some delays exists  at same time, e.g before and create
-    tryRunDelay(type);
   }
 
   // It's used to do index state machie by the type.
@@ -198,18 +183,14 @@ function createSource(processor, discrete) {
     }
 
     if (hasType(type)) {
-      console.warn(`The type has existed: ${type}`);
+      console.warn(`The dispatch of type has existed: ${type}`);
       return;
     }
 
     // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The system_hook is used for developer to control 'waiting' and something necessary.
-    const sm = creatStateMachine(type, 3, (sm) => {
-      observers[2].forEach((fn) => sm.hook("create", fn, HOOK_ORDER_MAP['create'].observer));
-      groups.push([type, sm, dispatch]);
-      tryRunDelay(type);
-    });
+    let sm = creatStateMachine(type);
 
     // createDispatch will return it.
     function dispatch(payload) {
@@ -221,7 +202,7 @@ function createSource(processor, discrete) {
           The current type is ${type}.
         `);
       }
-      const action = {
+      let action = {
         type,
         payload
       }
@@ -229,7 +210,7 @@ function createSource(processor, discrete) {
       processor(action, (datasource) => sm.endWork(datasource, action));
     }
 
-    const suid = uid++;
+    let suid = uid++;
 
     // Bind hooks:
 
@@ -283,8 +264,9 @@ function createSource(processor, discrete) {
     );
 
     // observers' hooks
-    observers[3].forEach((fn) => sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer));
+    observers[2].forEach((fn) => sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer));
 
+    record(type, sm, dispatch);
     return dispatch;
   }
 
@@ -319,12 +301,12 @@ function createSource(processor, discrete) {
   }
 
   function interrupt(type) {
-    const group = groups.find((group) => group[0] === type);
+    let group = findGroup(type);
     if (group) {
-      group[1].interrupt()
+      group[1].interrupt();
       return;
     }
-    console.warn(`Doesn't exist the type named ${type}.`);
+    console.warn(`Doesn't exist the type named ${type}. can't interrupt`);
   }
 
   function reset() {
@@ -334,8 +316,7 @@ function createSource(processor, discrete) {
       inspector.destroy();
     }
     inspector = createInspector();
-    delays = [];
-    observers = [[], [], [], []];
+    observers = [[], [], []];
     waiting = false;
   }
 

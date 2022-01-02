@@ -10,15 +10,19 @@ export interface Dispatch<T> {
   (arg: T): void;
 }
 
+declare interface Cancel {
+  (): void;
+}
+
 export function Observe<T, U>(
   tag: Tag,
   fn: ((action: ActionWithPayload<T>) => void) | ((datasource: T, action: ActionWithPayload<U>) => void)
-): void;
+): Cancel;
 export function Observe<T, U>(
   target: string,
   tag: Tag,
   fn: ((action: ActionWithPayload<T>) => void) | ((datasource: T, action: ActionWithPayload<U>) => void)
-): string;
+): Cancel;
 
 export function DispatchesCreator<T>(t1: string): [Dispatch<T>];
 export function DispatchesCreator<T, U>(t1: string, t2: string): [Dispatch<T>, Dispatch<U>];
@@ -50,7 +54,7 @@ export interface Processor {
   (action: ActionWithPayload<any>, notify: Notify): void;
 }
 
-export type Tag = "before" | 0 | "0" | "after" | 1 | "1" | "2" | "create" | 2;
+export type Tag = "before" | 0 | "0" | "after" | 1 | "1" | "2" | "interrupt" | 2;
 
 declare interface SourceCreator {
   (processor: Processor, discrete: boolean): Source

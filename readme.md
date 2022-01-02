@@ -134,25 +134,24 @@ function createDispatched(...types:string): Dispatch[];
 ```
 
 ``` javascript
-function observe(type:string, tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "create" | 2 , fn: Function): type
+function observe(type:string, tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel
 ```
 +  *type*: Whom our target is, usually be parameter called type of `createDisptach`.
-+  *tag* : What time we observe one action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe creating of action.
-+  *fn*  : What we do, at time one action is observed on specified time. If at "before", accepts one param called action, otherwise , two parameters called data source and action.
++  *tag* : What time we observe one action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe interrupting of action.
++  *fn*  : What we do, at time any action is observed on specified time. At "before", accepts one parameter called action; At "after" , two parameters called data source and action; At "interrupt" accepts the type.
 +  *type*: value of param called type.
 
 ``` javascript
-function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "create" | 2 , fn: Function): void;
+function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel;
 ```
 
-+  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe creating of action.
-+  *fn*  : What we do, at time any action is observed on specified time. If at "before", accepts one parameter called action, otherwise , two parameters called data source and action.
++  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe interrupting of action.
++  *fn*  : What we do, at time any action is observed on specified time. At "before", accepts one parameter called action; At "after" , two parameters called data source and action; At "interrupt" accepts the type.
 +  *note1*: Let's associate with middleware.
-+  *note2*: We can pre-observe action before creating;Observations of any action must be created before action created;
-Creates observation of action creating after created, it doesn't work.
++  *note2*: Observations of any action must be created before dispatch created. We only observe specific action after dispatch created.
 
 ``` javascript
-// Go back original status.
+// Go back original status
 function reset(): void;
 ```
 

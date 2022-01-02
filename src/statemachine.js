@@ -7,12 +7,9 @@ const indexMap = [
   ["after", 1],
   [1, 1],
   ["1", 1],
-  ["create", 2],
+  ["interrupt", 2],
   ["2", 2],
-  [2, 2],
-  ["3", 3],
-  [3, 3],
-  ["interrupt", 3]
+  [2, 2]
 ];
 
 function transformIndex(key) {
@@ -30,12 +27,12 @@ function transformIndex(key) {
   ["after", 1],
   [1, 1],
   ["1", 1].
-  ["create", 2]
+  ["interrupt", 2]
   ["2", 2]
   [2, 2]
   Matchs value by tag
   if none, throw error.
- * @param {"before" | 0 | "0" | "after" | "1" | 1 | "create" | "2" | 2 | "interrupt" | "3" | 3} tag as index
+ * @param {"before" | 0 | "0" | "after" | "1" | 1 | "interrupt" | "2" | 2 } tag as index
  * @returns {number} indexed value
  */
 export function validateTag(tag) {
@@ -43,7 +40,7 @@ export function validateTag(tag) {
   if (_typeof(index) === 'undefined') {
     throw new Error(`
       Invalid tag, expected:
-      "before", "0", 0, "after", "1", 1, "create", "2", 2, "interrupt", "3", 3.
+      "before", "0", 0, "after", "1", 1, "interrupt", "2", 2.
       Instead, received: ${tag}
     `)
   }
@@ -59,39 +56,34 @@ function flat(hooks) {
  * Each action should own respective state machine,
  * so we can be able to observe status of each task.
  * @param {string} target user
- * @param {number} number
- * We can add hook into pos 0 or pos 1, hooks of pos 0 always called before hooks of pos 1.
- * So wen can ensure priority of each hook.
- * If the number is 2, the number of kind of hook priority is 2.
  * @returns {StateMachine} 
  * hook, startWork and endWork, they are functions.
  * The startWork and endWork is used for marking state machine's status.
  * The hook let's do something before state machine works or after worked.
  */
-export default function creatStateMachine(target, number, effect) {
-  // 0 -> before, 1 -> after 2 -> create 3 -> interrupt
-  let hooksMap = [[], [], [], []];
+export default function creatStateMachine(target) {
+  // 0 -> before, 1 -> after 2 -> interrupt
+  let hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   let name = target;
   let processing = false;
   let interrupted = false;
 
-  function init() {
-    hooksMap = [[], [], [], []];
-    for (let i = 1; i <= number; i++) {
-      hooksMap.forEach((hooks) => hooks.push([]));
-    }
-  }
-
-  init();
-
   function hook(tag, fn, pos) {
-    const index = validateTag(tag);
+    let index = validateTag(tag);
     if (_typeof(fn) !== 'function') {
       throw new Error(`
         Expected the fn as a function. Instead, received: ${_typeof(fn)}.
       `);
     }
+    let len = hooksMap[index][pos].length;
     hooksMap[index][pos].push(fn);
+    let released = false;
+    return () => {
+      if (!released && hooksMap[index][pos].length >= len) {
+        released = true;
+        hooksMap[index][pos][len] = () => { };
+      }
+    }
   }
 
   // reset status
@@ -134,20 +126,16 @@ export default function creatStateMachine(target, number, effect) {
   }
 
   function reset() {
-    init();
     processing = false;
     interrupted = false;
+    hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   }
 
-  const sm = {
+  return {
     hook,
     reset,
     interrupt,
     startWork,
     endWork
-  }
-
-  effect(sm);
-  flat(hooksMap[2]).forEach((hook) => hook(name));
-  return sm;
+  };
 }
