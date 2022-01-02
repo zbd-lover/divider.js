@@ -647,8 +647,12 @@
         return group[1].reset();
       });
       groups = [];
-      inspector.destroy();
-      inspector = createInspector();
+
+      if (inspector) {
+        inspector.destroy();
+        inspector = createInspector();
+      }
+
       delays = [];
       observers = [];
       waiting = false;
