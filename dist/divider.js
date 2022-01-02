@@ -228,7 +228,9 @@
 
     function startWork(action) {
       // reset status 
-      tryWork();
+      if (interrupted) {
+        return;
+      }
 
       if (processing) {
         throw new Error("SM named ".concat(name, " has started work!"));
@@ -261,7 +263,7 @@
       }
 
       interrupted = true;
-      flat(hooksMap[3]).forEach(function (hook) {
+      flat(hooksMap[2]).forEach(function (hook) {
         return hook(name);
       });
     }

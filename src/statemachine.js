@@ -98,7 +98,9 @@ export default function creatStateMachine(target) {
 
   function startWork(action) {
     // reset status 
-    tryWork();
+    if (interrupted) {
+      return;
+    }
     if (processing) {
       throw new Error(`SM named ${name} has started work!`);
     }
@@ -122,7 +124,7 @@ export default function creatStateMachine(target) {
       return;
     }
     interrupted = true;
-    flat(hooksMap[3]).forEach((hook) => hook(name));
+    flat(hooksMap[2]).forEach((hook) => hook(name));
   }
 
   function reset() {
