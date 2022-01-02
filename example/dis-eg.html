@@ -59,24 +59,40 @@
 
     // discrete
     const source = divider.createSource(makeProcessor(), true);
-    const { observe, createDispatch } = source;
+    const { observe, createDispatch, interrupt } = source;
+
+    observe("interrupt", (name) => {
+      console.log(`${name} is interrupted. public`);
+    })
+
+
+    observe("before", (action) => {
+      console.log(`I am ${action.type}, go to working.`)
+    })
 
     const dispatchAdd = createDispatch('add');
     const dispatchDel = createDispatch('del');
 
+
     observe("add", 0, (action) => {
-      console.log(action);
+      console.log('add1');
     })
 
     observe("add", 0, (action) => {
-      console.log('second');
+      console.log('add2');
     });
 
     observe("add", 1, (d, a) => {
-      console.log(d, a);
+      console.log('add action result:', d);
     });
 
-    dispatchAdd({ id: 11 })
+    observe("add", "interrupt", (name) => {
+      console.log(`${name} is interrupted. private`);
+    });
+
+    dispatchAdd({ id: 11 });
+
+    setTimeout(() => interrupt("add"), 1000)
   </script>
 </body>
 

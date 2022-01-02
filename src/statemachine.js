@@ -9,7 +9,10 @@ const indexMap = [
   ["1", 1],
   ["create", 2],
   ["2", 2],
-  [2, 2]
+  [2, 2],
+  ["3", 3],
+  [3, 3],
+  ["interrupt", 3]
 ];
 
 function transformIndex(key) {
@@ -32,14 +35,16 @@ function transformIndex(key) {
   [2, 2]
   Matchs value by tag
   if none, throw error.
- * @param {"before" | 0 | "0" | "after" | "1" | 1 | "create" | "2" | 2} tag as index
+ * @param {"before" | 0 | "0" | "after" | "1" | 1 | "create" | "2" | 2 | "interrupt" | "3" | 3} tag as index
  * @returns {number} indexed value
  */
 export function validateTag(tag) {
   let index = transformIndex(tag);
   if (_typeof(index) === 'undefined') {
     throw new Error(`
-      Invalid tag.Expected: "before", "0", 0, "after", "1", 1, "create", "2", 2. Instead, received: ${tag}
+      Invalid tag, expected:
+      "before", "0", 0, "after", "1", 1, "create", "2", 2, "interrupt", "3", 3.
+      Instead, received: ${tag}
     `)
   }
   return index;
@@ -64,15 +69,14 @@ function flat(hooks) {
  * The hook let's do something before state machine works or after worked.
  */
 export default function creatStateMachine(target, number, effect) {
-  // 0 -> before, 1 -> after 2 -> create
-  const hooks = [[], [], []];
+  // 0 -> before, 1 -> after 2 -> create 3 -> interrupt
+  const hooksMap = [[], [], [], []];
   let name = target;
   let processing = false;
+  let interrupted = false;
 
   for (let i = 1; i <= number; i++) {
-    hooks[0].push([]);
-    hooks[1].push([]);
-    hooks[2].push([]);
+    hooksMap.forEach((hooks) => hooks.push([]));
   }
 
   function hook(tag, fn, pos) {
@@ -82,32 +86,56 @@ export default function creatStateMachine(target, number, effect) {
         Expected the fn as a function. Instead, received: ${_typeof(fn)}.
       `);
     }
-    hooks[index][pos].push(fn);
+    hooksMap[index][pos].push(fn);
+  }
+
+  // reset status
+  function tryWork() {
+    if (interrupted) {
+      interrupted = false;
+      processing = false;
+      return false;
+    }
+    return true
   }
 
   function startWork(action) {
+    // reset status 
+    tryWork();
     if (processing) {
       throw new Error(`SM named ${name} has started work!`);
     }
+    flat(hooksMap[0]).forEach((hook) => hook(action));
     processing = true;
-    flat(hooks[0]).forEach((hook) => hook(action));
   }
 
   function endWork(datasource, action) {
+    // not only resets status, and also skips the 'endwork'.
+    if (!tryWork()) return;
     if (!processing) {
       throw new Error(`SM named ${name} has ended work!`);
     }
     processing = false;
-    flat(hooks[1]).forEach((hook) => hook(datasource, action));
+    flat(hooksMap[1]).forEach((hook) => hook(datasource, action));
+  }
+
+  function interrupt() {
+    if (!processing) {
+      console.warn(`State Machine can be interrupted only after working or before ended.`);
+      return;
+    }
+    interrupted = true;
+    flat(hooksMap[3]).forEach((hook) => hook(name));
   }
 
   const sm = {
     hook,
+    interrupt,
     startWork,
     endWork
   }
 
   effect(sm);
-  flat(hooks[2]).forEach((hook) => hook(name));
+  flat(hooksMap[2]).forEach((hook) => hook(name));
   return sm;
 }

@@ -38,6 +38,7 @@ export interface Source {
   isDiscrete: () => boolean;
   isWaiting: () => boolean;
   dispatch<T>(action: ActionWithPayload<T>): Dispatch<T>;
+  interrupt: (type: string) => void;
 }
 
 export interface Notify {

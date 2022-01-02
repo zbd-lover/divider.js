@@ -113,8 +113,13 @@ const source:Source = createSource((a, b) => {}, true);
 ``` javascript
 // If exists one dispatch that is bound with 'action.type', then call and return it.
 // otherwise creates a new dispatch with action.type, then call and return it.
-function dispatch(action:Action): Dispatch
+function dispatch(action: Action): Dispatch
 ```
+
+``` javascript
+// Interrupts action, must called after working and before worked.
+function interrupt(type: string): void;
+``` 
 
 ``` javascript
 // creates a function that dispatches specific task to our processor.
@@ -143,7 +148,8 @@ function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "create" | 
 +  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe creating of action.
 +  *fn*  : What we do, at time any action is observed on specified time. If at "before", accepts one parameter called action, otherwise , two parameters called data source and action.
 +  *note1*: Let's associate with middleware.
-+  *note2*: We can pre-observe action before creating, the observation of its creating  will let's down after one action is created.
++  *note2*: We can pre-observe action before creating;Observations of any action must be created before action created;
+Creates observation of action creating after created, it doesn't work.
 
 # Final
 Please understand my expressing of English.
