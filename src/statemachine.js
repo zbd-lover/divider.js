@@ -134,7 +134,9 @@ export default function creatStateMachine(target, number, effect) {
   }
 
   function reset() {
-    init()
+    init();
+    processing = false;
+    interrupted = false;
   }
 
   const sm = {

@@ -269,6 +269,8 @@ function creatStateMachine(target, number, effect) {
 
   function reset() {
     init();
+    processing = false;
+    interrupted = false;
   }
 
   var sm = {
@@ -644,11 +646,11 @@ function createSource(processor, discrete) {
 
     if (inspector) {
       inspector.destroy();
-      inspector = createInspector();
     }
 
+    inspector = createInspector();
     delays = [];
-    observers = [];
+    observers = [[], [], [], []];
     waiting = false;
   }
 

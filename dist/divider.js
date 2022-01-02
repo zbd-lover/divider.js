@@ -275,6 +275,8 @@
 
     function reset() {
       init();
+      processing = false;
+      interrupted = false;
     }
 
     var sm = {
@@ -650,11 +652,11 @@
 
       if (inspector) {
         inspector.destroy();
-        inspector = createInspector();
       }
 
+      inspector = createInspector();
       delays = [];
-      observers = [];
+      observers = [[], [], [], []];
       waiting = false;
     }
 

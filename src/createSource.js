@@ -332,10 +332,10 @@ function createSource(processor, discrete) {
     groups = [];
     if (inspector) {
       inspector.destroy();
-      inspector = createInspector();
     }
+    inspector = createInspector();
     delays = [];
-    observers = [];
+    observers = [[], [], [], []];
     waiting = false;
   }
 

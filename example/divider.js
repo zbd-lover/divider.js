@@ -272,6 +272,8 @@ var divider = (function (exports) {
 
     function reset() {
       init();
+      processing = false;
+      interrupted = false;
     }
 
     var sm = {
@@ -647,11 +649,11 @@ var divider = (function (exports) {
 
       if (inspector) {
         inspector.destroy();
-        inspector = createInspector();
       }
 
+      inspector = createInspector();
       delays = [];
-      observers = [];
+      observers = [[], [], [], []];
       waiting = false;
     }
 
