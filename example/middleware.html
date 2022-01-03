@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script src="./divider.js"></script>
+  <script>
+    const { createSource, applyMiddleware, combineProcessors, decorateProcessor } = divider;
+
+    const processor = decorateProcessor(
+      (action, notify) => {
+        console.log(`I'm user processor.`)
+        notify();
+      },
+      ["add"]
+    );
+
+    function makeLogger() {
+      const logs = [];
+      // inner processor;
+      function processorForLogger(action, notify) {
+        console.log(`I'm logger processor.`)
+        logs.forEach((text) => console.log(text));
+        notify();
+      }
+
+      let print;
+
+      // middleware
+      function logger(api) {
+        console.log(api);
+        const { createDispatch, observe } = api;
+        print = createDispatch('log');
+        // print(); // It's not allowed.
+
+        return (type) => {
+          const text = `Creates a dispatch, the types is ${type}.`
+          console.log(text);
+          logs.push(text);
+          return createDispatch(type);
+        }
+      }
+
+      return {
+        middleware: logger,
+        processor: decorateProcessor(processorForLogger, ['log']),
+        print: (...args) => {
+          print(...args)
+        }
+      }
+    }
+
+    const logger = makeLogger();
+
+    function police(source) {
+      const { createDispatch, observe } = source;
+      const animals = ['dog', 'cat', 'duck'];
+      return (type) => {
+        if (animals.includes(type)) {
+          console.log(`How a cute ${type} pet, but i'm a police.`);
+          return (action) => console.error(`It's invalid.`);
+        }
+        return createDispatch(type)
+      }
+    }
+
+    const finalProcessor = combineProcessors(logger.processor, processor);
+
+    const source = applyMiddleware(
+      createSource(finalProcessor),
+      logger.middleware, police
+    );
+
+    const add = source.createDispatch("add");
+    const duck = source.createDispatch("duck");
+
+  </script>
+</body>
+
+</html>

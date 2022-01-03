@@ -1,5 +1,11 @@
 import createSource from "./createSource";
+import applyMiddleware from "./applyMiddleware";
+import combineProcessors from "./combineProcessors";
+import decorateProcessor from "./decorateProcessor";
 
 export {
-  createSource
+  createSource,
+  applyMiddleware,
+  decorateProcessor,
+  combineProcessors
 }

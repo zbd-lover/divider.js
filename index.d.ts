@@ -1,3 +1,7 @@
+interface _Pick<T, K extends keyof T> {
+  [key: K]: T[K]
+}
+
 export interface Action {
   type: String;
 }
@@ -51,7 +55,7 @@ export interface Notify {
 }
 
 export interface Processor {
-  (action: ActionWithPayload<any>, notify: Notify): void;
+  (action: ActionWithPayload<any>, notify: Notify): void | boolean;
 }
 
 export type Tag = "before" | 0 | "0" | "after" | 1 | "1" | "2" | "interrupt" | 2;
@@ -59,5 +63,27 @@ export type Tag = "before" | 0 | "0" | "after" | 1 | "1" | "2" | "interrupt" | 2
 declare interface SourceCreator {
   (processor: Processor, discrete: boolean): Source
 }
-
 export const createSource: SourceCreator;
+
+declare interface ProcessorCombiner {
+  (...processors: Processor[]): Processor
+}
+export const combineProcessor: ProcessorCombiner;
+
+declare interface MiddleWare {
+  (source: _Pick<Source, 'observe' | 'createDispatch' | 'createDispatches' | 'hasType' | 'isDiscrete' | 'isWaiting'>)
+    :
+    <T>(type: string) => Dispatch<T>
+}
+
+declare interface MiddleWareApplier {
+  (source: Source, ...middlewares: MiddleWare): Source
+}
+export const applyMiddleware: MiddleWareApplier;
+
+declare interface ProcessorDecorater {
+  // before: (action: ActionWithPayload<any>, notify: Notify): void | boolean;
+  (processor: Processor): (action: ActionWithPayload<any>, notify: Notify) => boolean;
+}
+
+export const decorateProcessor: ProcessorDecorater;

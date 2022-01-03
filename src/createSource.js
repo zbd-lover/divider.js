@@ -1,7 +1,7 @@
 import _typeof from "./util/typeof";
 import filterNullValues from "./util/filterNullValues";
-import createInspector from "./inspector";
-import creatStateMachine, { validateTag } from "./statemachine";
+import verifyShape from "./util/verifyShape";
+import creatStateMachine, { validateTag } from "./util/statemachine";
 
 /**
  * 每一个action都有自己对应的state machine,
@@ -14,7 +14,8 @@ import creatStateMachine, { validateTag } from "./statemachine";
  * Each action owns respective state machine.
  * The state machine can be observed, allowed times are: before working, after worked, after interrupted.
  * ('Observe api' let us to observe the actions, actually, the state machines are real target.)
- * We will observe actions inside the system to do something necessary, and user can observe any action or specific action.
+ * We will observe actions inside the system to do something necessary,
+ * and user can observe any action or specific action.
  * Callbacks of observations are order, the follwing is order-object
  * (Observations of any action  are notified at first, then observations of specific action. )
  */
@@ -44,14 +45,10 @@ const HOOK_ORDER_MAP = {
  * @param {Boolean} discrete decides the relative ops is 'discrete' or 'sequence'.
  * @returns {Source} let's observe specific op of source and dispatch them.
  */
-function createSource(processor, discrete) {
-
+export default function createSource(processor, discrete) {
   if (_typeof(processor) !== 'function') {
     throw new Error(`Expected the process as a function. Instead, received: ${_typeof(processor)}`);
   }
-
-  let inspector = createInspector();
-
   /**
    * Can we dispatch the next action right now?
    * Sets waiting true when processor starts working.
@@ -61,35 +58,27 @@ function createSource(processor, discrete) {
    */
   let waiting = false;
 
-  // item: [type, state machine, dispatch, interrupt];
+  /** group-item: [ type, statemachine, dispatch, interrupt ]; */
   let groups = [];
 
-  function record(type, sm, dispatch) {
-    groups.push([type, sm, dispatch]);
-  }
-
-  function findGroup(type) {
-    return groups.find((group) => group[0] === type)
-  }
+  /** save a group-item ( [ type, statemachine, dispatch, interrupt ] ) */
+  let record = (type, sm, dispatch) => groups.push([type, sm, dispatch])
+  let findGroup = (type) => groups.find((group) => group[0] === type);
+  let getDispatch = (type) => !!findGroup(type) ? findGroup(type)[2] : null
 
   function interrupt(type) {
     let group = findGroup(type);
     if (group) {
-      group[3]();
+      group[1].interrupt();
       return;
     }
     console.warn(`Doesn't exist the type named ${type}. can't interrupt`);
   }
 
-  function hasType(type) {
-    return !!findGroup(type);
-  }
-
-  function getDispatch(type) {
-    let group = findGroup(type)
-    if (group) {
-      return group[2];
-    }
+  let util = {
+    isDiscrete: () => !!discrete,
+    isWaiting: () => waiting,
+    hasType: (type) => !!findGroup(type)
   }
 
   /**
@@ -99,8 +88,6 @@ function createSource(processor, discrete) {
    */
   let observers = [[], [], []];
   let unloaders = [[], [], []];
-
-  let resetCounts = 0;
 
   /**
    * Observe dispatch.
@@ -117,14 +104,13 @@ function createSource(processor, discrete) {
   }
 
   function observeAll(tag, fn) {
-    let currentResetCounts = resetCounts;
     let index = validateTag(tag);
     let len = observers[index].length;
     observers[index][len] = fn;
     unloaders[index][len] = {};
-    let released = false;
+    let released = false; 
     return () => {
-      if (!released && currentResetCounts === resetCounts && unloaders[index].length >= len) {
+      if (!released && unloaders[index].length >= len) {
         for (let [, unload] of Object.entries(unloaders[index][len])) {
           unload();
         }
@@ -134,12 +120,12 @@ function createSource(processor, discrete) {
   }
 
   function observeOne(type, tag, fn) {
-    if (!hasType(type)) {
+    if (!util.hasType(type)) {
       console.warn(`Cant't observe action before created, the action's type is ${type}.`);
       return;
     }
     let index = validateTag(tag);
-    let group = groups.find((group) => group[0] === type);
+    let group = findGroup(type);
     let positon = 0;
     switch (index) {
       case 0:
@@ -156,6 +142,7 @@ function createSource(processor, discrete) {
     }
     return group[1].hook(
       tag,
+      // this function looks like 'reloadsing of function'.
       (arg1, arg2) => {
         let isBefore = index === 0;
         let isAfter = index === 1;
@@ -181,10 +168,6 @@ function createSource(processor, discrete) {
     );
   }
 
-  // It's used to do index state machie by the type.
-  // Inspector uses it to know who is processing, too.
-  let uid = 0;
-
   /**
    * Creates a dispatch for task you want.
    * We need 'pre-create' the each dispatch with the 'type', then, just use these dispatches.
@@ -199,9 +182,8 @@ function createSource(processor, discrete) {
         Instead, type received:${_typeof(type)}, value received:${type}
       `);
     }
-    let currentResetCounts = resetCounts;
 
-    if (hasType(type)) {
+    if (util.hasType(type)) {
       console.warn(`The dispatch of type has existed: ${type}`);
       return;
     }
@@ -210,44 +192,32 @@ function createSource(processor, discrete) {
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The system_hook is used for developer to control 'waiting' and something necessary.
     let sm = creatStateMachine(type);
-    let currentWorkUnit;
 
-    // createDispatch will return it.
+    // Each calling of dispatch owns individual status.
+    // When action with type 'A' is dispatched, the previous action with type 'A' need to be interrupted.
+    let lastWorkUnit;
 
     function dispatch(payload) {
-      if (currentResetCounts !== resetCounts) {
-        console.log(`Invalid dispatch, because the source has reseted, the type is ${type}`);
-        return
-      }
-      if (!discrete && waiting) {
+      if (!util.isDiscrete() && waiting) {
         throw new Error(`
           Can\'t dispatch action while sequence source is being processed,
-          if 'discrete dispatch' is expected, pass 'true' to parameter
-          called 'discrete' of 'createSource'.
+          if 'discrete dispatch' is expected, pass 'true' to parameter called 'discrete' of 'createSource'.
           The current type is ${type}.
         `);
       }
-      if (currentWorkUnit && discrete) {
-        currentWorkUnit.interrupt();
+      if (lastWorkUnit && util.isDiscrete()) {
+        lastWorkUnit.interrupt();
       }
       let workUnit = sm.createWorkUnit();
-      currentWorkUnit = workUnit;
+      lastWorkUnit = workUnit;
+
       let action = {
         type,
         payload
       }
-      let group = findGroup(type);
-      if (group) {
-        // current interrupt
-        group[3] = workUnit.interrupt;
-      }
-
       workUnit.startWork(action);
       processor(action, (datasource) => workUnit.endWork(datasource, action));
     }
-
-    let suid = uid++;
-
     // Bind hooks:
 
     // Hooks for 'before':
@@ -256,9 +226,6 @@ function createSource(processor, discrete) {
       "before",
       () => {
         waiting = true;
-        if (inspector) {
-          inspector.collect(suid, 0);
-        }
         if (discrete) {
           waiting = false;
         }
@@ -273,9 +240,6 @@ function createSource(processor, discrete) {
     sm.hook(
       'after',
       () => {
-        if (inspector) {
-          inspector.collect(suid, 1);
-        }
         if (!discrete) {
           waiting = false;
         }
@@ -288,16 +252,9 @@ function createSource(processor, discrete) {
     // Bind Hooks for 'interrupt'
     sm.hook(
       "interrupt",
-      () => {
-        // inspector is able to collect 'start' of action, opposite, is not.
-        if (inspector) {
-          inspector.collect(suid, 1);
-        }
-        waiting = false;
-      },
+      () => waiting = false,
       HOOK_ORDER_MAP["interrupt"].system
     );
-
     // observers' hooks
     filterNullValues(observers[2]).forEach((fn, i) => unloaders[2][i][type] = sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer));
 
@@ -313,20 +270,14 @@ function createSource(processor, discrete) {
     return types.map((type) => createDispatch(type));
   }
 
-  function isDiscrete() {
-    return !!discrete;
-  }
-
-  function isWaiting() {
-    return waiting;
-  }
-
   /**
+   * Grammar sugar
    * @param {Action} action 
    */
   function dispatch(action) {
+    verifyShape(action, ['type'], 'The action');
     let dispatch;
-    if (hasType(action.type)) {
+    if (util.hasType(action.type)) {
       dispatch = getDispatch(action.type)
     } else {
       dispatch = createDispatch(action.type);
@@ -335,36 +286,13 @@ function createSource(processor, discrete) {
     return dispatch;
   }
 
-  function reset() {
-    groups.forEach((group) => {
-      // interrupts all available action.
-      if (_typeof(group[3]) === 'function'){
-        group[3]();
-      }
-      group[1].reset();
-    });
-    groups = [];
-    if (inspector) {
-      inspector.destroy();
-    }
-    inspector = createInspector();
-    observers = [[], [], []];
-    unloaders = [[], [], []];
-    waiting = false;
-    resetCounts++
-  }
-
   return {
+    ...util,
     observe,
-    isDiscrete,
-    isWaiting,
-    reset,
-    hasType,
-    dispatch,
     interrupt,
     createDispatch,
     createDispatches,
+    dispatch,
+    reset: () => console.log(`No effect, the 'reset' api has deprecated.`)
   }
 }
-
-export default createSource;

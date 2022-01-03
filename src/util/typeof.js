@@ -1,5 +1,6 @@
 const _toString = Object.prototype.toString;
 
+// Type of a value.
 export default function _typeof(v) {
   if (typeof v === 'undefined' || v === null) {
     return 'undefined';

@@ -9,6 +9,73 @@ React bindings
 + npm: https://www.npmjs.com/package/react-divider.js
 + git: https://github.com/zbd-lover/react-divider
 
+# API
+
+``` javascript
+// processor: Accepts parameter called action and notify, it works by the action, then calls the notify to notify its observers with some responses (manually)
+// discrete:  Whether the processor can do multiple tasks at one time or not.
+// Source:    It's allow us to observe the processor and dispatch tasks to processor.
+function createSource(processor:Function, discrete:boolean): Source;
+```
+
+**Note: if processor do asynchronous operation, we must promise that notify is called when operation was done.**
+
+``` javascript
+// Creates a function that dispatches specific task to our processor.
+function createDispatch(type: string): Dispatch
+```
++  *type*: task name, we need keep it unique (not global). 
++  *Dispatch*: dispatches task to our processor.
+
+``` javascript
+// create some dispatches.
+function createDispatched(...types:string): Dispatch[];
+```
+
+``` javascript
+// tag: What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. 
+//     "1","after" and 1 are the latter. If tag is 2, we can observe interrupting of action.
+// fn: What we do, at time any action is observed. At "before", accepts one parameter called action; At "after" , 
+//     two parameters called data source and action; At "interrupt" accepts the type.
+function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel;
+```
+
+``` javascript
+// type: delimit our callback
+// tag:  please see the above observe
+// fn:   please see the above observe
+function observe(type: string, tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel
+```
+**Note: Observations of any action must be created before dispatch created. We only observe specific action after dispatch created.**
+
+``` javascript
+// Interrupts action, must called after working and before worked.
+// Interrupting of action means that callback of 'after' will not be called, your processor still works normally.
+function interrupt(type: string): void;
+``` 
+**Note: Normally, we will make good effect, interrupt asynchronous action by it.**
+
+``` javascript
+// If exists one dispatch that is bound with 'action.type', then call and return it.
+// otherwise creates a new dispatch with action.type, then call and return it.
+// Think of it as grammar sugar.
+function dispatch(action: Action): Dispatch
+```
+
+The followings are advance API, Please see the example folder.
+
+``` javascript
+function applyMiddleware(source: Source, ...middlewares: MiddleWare[]): Source;
+```
+
+``` javascript
+function combineProcessors(...processors: Processors[]): Processor;
+```
+
+``` javascript
+function decorateProcessor(processor: Processor, types: string[]): Processor;
+```
+
 # Example
 Below example is traditional in web.
 Let's query server's data and update `dom`.
@@ -92,68 +159,6 @@ query();
 Now, we all know: fetching of external data separates with our processing for it.
 What's more, all operation of external data comes together, sounds good.
 We should see the place  of `divider.js`  in our programs clearly.
-
-# API
-
-``` javascript
-function createSource(processor:Function, discrete:boolean): Source;
-```
-
-+  *processor* : accepts parameter called action and notify, it works by the action, then calls the notify to notify its observers with some responses (manually)
-+  *discrete*   : whether the processor can do multiple tasks at one time or not.
-+  *Source*     : it's allow us to observe the processor and dispatch tasks to processor.
-+  note        : if processor do asynchronous operation, we must promise that notify called happened at     operation is done.
-
-keys of source are `createDispatch` and `observe`;
-
-``` javascript
-const source:Source = createSource((a, b) => {}, true);
-```
-
-``` javascript
-// If exists one dispatch that is bound with 'action.type', then call and return it.
-// otherwise creates a new dispatch with action.type, then call and return it.
-function dispatch(action: Action): Dispatch
-```
-
-``` javascript
-// Interrupts action, must called after working and before worked.
-function interrupt(type: string): void;
-``` 
-
-``` javascript
-// creates a function that dispatches specific task to our processor.
-function createDispatch(type: string): Dispatch
-```
-+  *type*: task name, we need keep it unique (not global). 
-+  *Dispatch*: dispatches task to our processor.
-
-``` javascript
-// create some dispatches.
-function createDispatched(...types:string): Dispatch[];
-```
-
-``` javascript
-function observe(type:string, tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel
-```
-+  *type*: Whom our target is, usually be parameter called type of `createDisptach`.
-+  *tag* : What time we observe one action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe interrupting of action.
-+  *fn*  : What we do, at time any action is observed on specified time. At "before", accepts one parameter called action; At "after" , two parameters called data source and action; At "interrupt" accepts the type.
-+  *type*: value of param called type.
-
-``` javascript
-function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel;
-```
-
-+  *tag* : What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. "1","after" and 1 are the latter. If tag is 2, we can observe interrupting of action.
-+  *fn*  : What we do, at time any action is observed on specified time. At "before", accepts one parameter called action; At "after" , two parameters called data source and action; At "interrupt" accepts the type.
-+  *note1*: Let's associate with middleware.
-+  *note2*: Observations of any action must be created before dispatch created. We only observe specific action after dispatch created.
-
-``` javascript
-// Go back original status
-function reset(): void;
-```
 
 # Final
 Please understand my expressing of English.

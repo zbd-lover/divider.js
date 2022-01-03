@@ -1,5 +1,5 @@
-import _typeof from "./util/typeof";
-import filterNullValues from "./util/filterNullValues";
+import _typeof from "./typeof";
+import filterNullValues from "./filterNullValues";
 
 const indexMap = [
   ["before", 0],
@@ -21,18 +21,7 @@ function transformIndex(key) {
 }
 
 /**
- * map:
-  ["before", 0],
-  [0, 0],
-  ["0", 0],
-  ["after", 1],
-  [1, 1],
-  ["1", 1].
-  ["interrupt", 2]
-  ["2", 2]
-  [2, 2]
-  Matchs value by tag
-  if none, throw error.
+ * Matchs value by tag if none, throw error.
  * @param {"before" | 0 | "0" | "after" | "1" | 1 | "interrupt" | "2" | 2 } tag as index
  * @returns {number} indexed value
  */
@@ -48,27 +37,29 @@ export function validateTag(tag) {
   return index;
 }
 
-function flat(hooks) {
+function _flat(hooks) {
   return hooks.reduce((a, b) => a.concat(b), [])
 }
 
 /**
- * Creates a state machine when a action is dispatched.
- * Each action should own respective state machine,
+ * Creates a state machine when `createDispatch` is called.
+ * Each 'dispatch' should own respective state machine,
  * so we can be able to observe status of each task.
  * @param {string} target user
  * @returns {StateMachine} 
- * hook, startWork and endWork, they are functions.
- * The startWork and endWork is used for marking state machine's status.
- * The hook let's do something before state machine works or after worked.
+ * `hook`, `reset`, `createWorkUnit`, they are functions.
+ * `hook` let's do something before state machine works or after worked.
+ * `createWork` unit returns `startWork`, `endWork`, and `interrupt`,
+ * `startWork` and `endWork` is used for marking machine's status,
+ * `interrupt`: Will not notify observers in this processing.
  */
 export default function creatStateMachine(target, interactive = true) {
   // 0 -> before, 1 -> after 2 -> interrupt
   let hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   let name = target;
-  let resetCounts = 0;
+  let currentInterrupt;  
+
   function hook(tag, fn, pos) {
-    let currentResetCounts = resetCounts;
     let index = validateTag(tag);
     if (_typeof(fn) !== 'function') {
       throw new Error(`Expected the fn as a function. Instead, received: ${_typeof(fn)}.`);
@@ -77,7 +68,7 @@ export default function creatStateMachine(target, interactive = true) {
     hooksMap[index][pos][len] = fn;
     let released = false;
     return () => {
-      if (!released && currentResetCounts === resetCounts && hooksMap[index][pos].length >= len) {
+      if (!released && hooksMap[index][pos].length >= len) {
         released = true;
         hooksMap[index][pos][len] = null;
       }
@@ -98,7 +89,7 @@ export default function creatStateMachine(target, interactive = true) {
       if (processing) {
         throw new Error(`SM named ${name} has started work!`);
       }
-      filterNullValues(flat(hooksMap[0])).forEach((hook) => hook(action));
+      filterNullValues(_flat(hooksMap[0])).forEach((hook) => hook(action));
       processing = true;
     }
 
@@ -110,7 +101,7 @@ export default function creatStateMachine(target, interactive = true) {
         throw new Error(`SM named ${name} has ended work!`);
       }
       processing = false;
-      filterNullValues(flat(hooksMap[1])).forEach((hook) => hook(datasource, action));
+      filterNullValues(_flat(hooksMap[1])).forEach((hook) => hook(datasource, action));
     };
 
     function interrupt() {
@@ -133,12 +124,15 @@ export default function creatStateMachine(target, interactive = true) {
 
       interrupted = true;
       processing = false;
-      filterNullValues(flat(hooksMap[2])).forEach((hook) => hook(name));
+      
+      filterNullValues(_flat(hooksMap[2])).forEach((hook) => hook(name));
       if (interactive) {
         console.log(`State Machine named ${name} is interrupted, the uid: ${cuid}.`);
         console.log(`---------------`);
       }
     }
+
+    currentInterrupt = interrupt;
 
     return {
       startWork,
@@ -147,14 +141,13 @@ export default function creatStateMachine(target, interactive = true) {
     }
   }
 
-  function reset() {
-    resetCounts++;
-    hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
-  }
-
   return {
     hook,
-    reset,
-    createWorkUnit
+    createWorkUnit,
+    interrupt() {
+      if (_typeof(currentInterrupt) === 'function') {
+        currentInterrupt();
+      }
+    }
   };
 }
