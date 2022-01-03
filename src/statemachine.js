@@ -1,4 +1,5 @@
 import _typeof from "./util/typeof";
+import filterNullValues from "./util/filterNullValues";
 
 const indexMap = [
   ["before", 0],
@@ -65,30 +66,31 @@ export default function creatStateMachine(target, interactive = true) {
   // 0 -> before, 1 -> after 2 -> interrupt
   let hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   let name = target;
-
+  let resetCounts = 0;
   function hook(tag, fn, pos) {
+    let currentResetCounts = resetCounts;
     let index = validateTag(tag);
     if (_typeof(fn) !== 'function') {
-      throw new Error(`
-        Expected the fn as a function. Instead, received: ${_typeof(fn)}.
-      `);
+      throw new Error(`Expected the fn as a function. Instead, received: ${_typeof(fn)}.`);
     }
     let len = hooksMap[index][pos].length;
-    hooksMap[index][pos].push(fn);
+    hooksMap[index][pos][len] = fn;
     let released = false;
     return () => {
-      if (!released && hooksMap[index][pos].length >= len) {
+      if (!released && currentResetCounts === resetCounts && hooksMap[index][pos].length >= len) {
         released = true;
-        hooksMap[index][pos][len] = () => { };
+        hooksMap[index][pos][len] = null;
       }
     }
   }
 
   let uid = 1;
+
   function createWorkUnit() {
     let cuid = uid++;
     let processing;
     let interrupted = false;
+
     function startWork(action) {
       if (interrupted) {
         return;
@@ -96,9 +98,10 @@ export default function creatStateMachine(target, interactive = true) {
       if (processing) {
         throw new Error(`SM named ${name} has started work!`);
       }
-      flat(hooksMap[0]).forEach((hook) => hook(action));
+      filterNullValues(flat(hooksMap[0])).forEach((hook) => hook(action));
       processing = true;
     }
+
     function endWork(datasource, action) {
       if (interrupted) {
         return;
@@ -107,7 +110,7 @@ export default function creatStateMachine(target, interactive = true) {
         throw new Error(`SM named ${name} has ended work!`);
       }
       processing = false;
-      flat(hooksMap[1]).forEach((hook) => hook(datasource, action));
+      filterNullValues(flat(hooksMap[1])).forEach((hook) => hook(datasource, action));
     };
 
     function interrupt() {
@@ -127,9 +130,10 @@ export default function creatStateMachine(target, interactive = true) {
         console.log(`State Machine can be interrupted only after working or before ended, the uid: ${cuid}.`);
         return;
       }
+
       interrupted = true;
-      processing = false
-      flat(hooksMap[2]).forEach((hook) => hook(name));
+      processing = false;
+      filterNullValues(flat(hooksMap[2])).forEach((hook) => hook(name));
       if (interactive) {
         console.log(`State Machine named ${name} is interrupted, the uid: ${cuid}.`);
         console.log(`---------------`);
@@ -144,6 +148,7 @@ export default function creatStateMachine(target, interactive = true) {
   }
 
   function reset() {
+    resetCounts++;
     hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   }
 

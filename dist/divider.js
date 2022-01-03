@@ -4,6 +4,65 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.divider = {}));
 })(this, (function (exports) { 'use strict';
 
+  function _slicedToArray(arr, i) {
+    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
+  }
+
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+
+  function _iterableToArrayLimit(arr, i) {
+    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
+
+    if (_i == null) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+
+    var _s, _e;
+
+    try {
+      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
   var _toString = Object.prototype.toString;
   function _typeof(v) {
     if (typeof v === 'undefined' || v === null) {
@@ -25,6 +84,21 @@
       default:
         return 'object';
     }
+  }
+
+  /**
+   * @param {Array<any>} arr 
+   * @returns Array<any>
+   */
+
+  function filterNullValues(arr) {
+    if (_typeof(arr) !== 'array') {
+      return [];
+    }
+
+    return arr.filter(function (item) {
+      return !!item;
+    });
   }
 
   var forkOption = {
@@ -194,22 +268,23 @@
     // 0 -> before, 1 -> after 2 -> interrupt
     var hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
     var name = target;
+    var resetCounts = 0;
 
     function hook(tag, fn, pos) {
+      var currentResetCounts = resetCounts;
       var index = validateTag(tag);
 
       if (_typeof(fn) !== 'function') {
-        throw new Error("\n        Expected the fn as a function. Instead, received: ".concat(_typeof(fn), ".\n      "));
+        throw new Error("Expected the fn as a function. Instead, received: ".concat(_typeof(fn), "."));
       }
 
       var len = hooksMap[index][pos].length;
-      hooksMap[index][pos].push(fn);
+      hooksMap[index][pos][len] = fn;
       var released = false;
       return function () {
-        if (!released && hooksMap[index][pos].length >= len) {
+        if (!released && currentResetCounts === resetCounts && hooksMap[index][pos].length >= len) {
           released = true;
-
-          hooksMap[index][pos][len] = function () {};
+          hooksMap[index][pos][len] = null;
         }
       };
     }
@@ -230,7 +305,7 @@
           throw new Error("SM named ".concat(name, " has started work!"));
         }
 
-        flat(hooksMap[0]).forEach(function (hook) {
+        filterNullValues(flat(hooksMap[0])).forEach(function (hook) {
           return hook(action);
         });
         processing = true;
@@ -246,7 +321,7 @@
         }
 
         processing = false;
-        flat(hooksMap[1]).forEach(function (hook) {
+        filterNullValues(flat(hooksMap[1])).forEach(function (hook) {
           return hook(datasource, action);
         });
       }
@@ -274,7 +349,7 @@
 
         interrupted = true;
         processing = false;
-        flat(hooksMap[2]).forEach(function (hook) {
+        filterNullValues(flat(hooksMap[2])).forEach(function (hook) {
           return hook(name);
         });
 
@@ -292,6 +367,7 @@
     }
 
     function reset() {
+      resetCounts++;
       hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
     }
 
@@ -401,6 +477,8 @@
 
 
     var observers = [[], [], []];
+    var unloaders = [[], [], []];
+    var resetCounts = 0;
     /**
      * Observe dispatch.
      * @param {string} type  whom we observe
@@ -418,8 +496,24 @@
     }
 
     function observeAll(tag, fn) {
+      var currentResetCounts = resetCounts;
       var index = validateTag(tag);
-      observers[index].push(fn);
+      var len = observers[index].length;
+      observers[index][len] = fn;
+      unloaders[index][len] = {};
+      var released = false;
+      return function () {
+        if (!released && currentResetCounts === resetCounts && unloaders[index].length >= len) {
+          for (var _i = 0, _Object$entries = Object.entries(unloaders[index][len]); _i < _Object$entries.length; _i++) {
+            var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+                unload = _Object$entries$_i[1];
+
+            unload();
+          }
+
+          observers[index][len] = null;
+        }
+      };
     }
 
     function observeOne(type, tag, fn) {
@@ -491,6 +585,8 @@
         throw new Error("\n        Expected the type as a string and not empty.\n        Instead, type received:".concat(_typeof(type), ", value received:").concat(type, "\n      "));
       }
 
+      var currentResetCounts = resetCounts;
+
       if (hasType(type)) {
         console.warn("The dispatch of type has existed: ".concat(type));
         return;
@@ -503,11 +599,16 @@
       var currentWorkUnit; // createDispatch will return it.
 
       function dispatch(payload) {
+        if (currentResetCounts !== resetCounts) {
+          console.log("Invalid dispatch, because the source has reseted, the type is ".concat(type));
+          return;
+        }
+
         if (!discrete && waiting) {
           throw new Error("\n          Can't dispatch action while sequence source is being processed,\n          if 'discrete dispatch' is expected, pass 'true' to parameter\n          called 'discrete' of 'createSource'.\n          The current type is ".concat(type, ".\n        "));
         }
 
-        if (currentWorkUnit) {
+        if (currentWorkUnit && discrete) {
           currentWorkUnit.interrupt();
         }
 
@@ -546,8 +647,8 @@
         }
       }, HOOK_ORDER_MAP["before"].system); // observers' hooks
 
-      observers[0].forEach(function (fn) {
-        return sm.hook("before", fn, HOOK_ORDER_MAP["before"].observer);
+      filterNullValues(observers[0]).forEach(function (fn, i) {
+        return unloaders[0][i][type] = sm.hook("before", fn, HOOK_ORDER_MAP["before"].observer);
       }); // Binds Hooks for 'after'
       // system hook
 
@@ -561,8 +662,8 @@
         }
       }, HOOK_ORDER_MAP["before"].system); // observers' hooks
 
-      observers[1].forEach(function (fn) {
-        return sm.hook("after", fn, HOOK_ORDER_MAP["after"].observer);
+      filterNullValues(observers[1]).forEach(function (fn, i) {
+        return unloaders[1][i][type] = sm.hook("after", fn, HOOK_ORDER_MAP["after"].observer);
       }); // Bind Hooks for 'interrupt'
 
       sm.hook("interrupt", function () {
@@ -574,8 +675,8 @@
         waiting = false;
       }, HOOK_ORDER_MAP["interrupt"].system); // observers' hooks
 
-      observers[2].forEach(function (fn) {
-        return sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer);
+      filterNullValues(observers[2]).forEach(function (fn, i) {
+        return unloaders[2][i][type] = sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer);
       });
       record(type, sm, dispatch);
       return dispatch;
@@ -623,7 +724,11 @@
 
     function reset() {
       groups.forEach(function (group) {
-        group[3]();
+        // interrupts all available action.
+        if (_typeof(group[3]) === 'function') {
+          group[3]();
+        }
+
         group[1].reset();
       });
       groups = [];
@@ -634,7 +739,9 @@
 
       inspector = createInspector();
       observers = [[], [], []];
+      unloaders = [[], [], []];
       waiting = false;
+      resetCounts++;
     }
 
     return {

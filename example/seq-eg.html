@@ -65,7 +65,7 @@
     const { observe, createDispatch, reset } = source;
 
     // observes all action. 
-    observe(0, (action) => {
+    const c1 = observe(0, (action) => {
       console.log('action:', action);
     });
 
@@ -75,8 +75,6 @@
     const cancel = observe('create', 0, () => {
       console.log('starts calc');
     });
-
-    console.log(typeof cancel);
 
     observe('create', 1, () => {
       console.log('ends cacl');
@@ -89,26 +87,13 @@
       name: "1132",
     });
 
-    // setTimeout(() => {
-    //   create({
-    //     id: 5,
-    //     name: "1132",
-    //   });
-
-    //   setTimeout(() => {
-    //     delDispatch({ id: 5 });
-    //   }, 500);
-    // }, 500);
-
     const delDispatch = createDispatch("del");
 
     observe("del", 0, () => {
       console.log("I separates with hook for other dispatchs.");
     });
 
-    cancel()
-
-
+    // cancel()
   </script>
 </body>
 

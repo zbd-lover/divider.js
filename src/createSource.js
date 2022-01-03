@@ -1,4 +1,5 @@
 import _typeof from "./util/typeof";
+import filterNullValues from "./util/filterNullValues";
 import createInspector from "./inspector";
 import creatStateMachine, { validateTag } from "./statemachine";
 
@@ -97,6 +98,10 @@ function createSource(processor, discrete) {
    * 2 -> after action interrupted.
    */
   let observers = [[], [], []];
+  let unloaders = [[], [], []];
+
+  let resetCounts = 0;
+
   /**
    * Observe dispatch.
    * @param {string} type  whom we observe
@@ -112,8 +117,20 @@ function createSource(processor, discrete) {
   }
 
   function observeAll(tag, fn) {
+    let currentResetCounts = resetCounts;
     let index = validateTag(tag);
-    observers[index].push(fn);
+    let len = observers[index].length;
+    observers[index][len] = fn;
+    unloaders[index][len] = {};
+    let released = false;
+    return () => {
+      if (!released && currentResetCounts === resetCounts && unloaders[index].length >= len) {
+        for (let [, unload] of Object.entries(unloaders[index][len])) {
+          unload();
+        }
+        observers[index][len] = null;
+      }
+    }
   }
 
   function observeOne(type, tag, fn) {
@@ -182,6 +199,7 @@ function createSource(processor, discrete) {
         Instead, type received:${_typeof(type)}, value received:${type}
       `);
     }
+    let currentResetCounts = resetCounts;
 
     if (hasType(type)) {
       console.warn(`The dispatch of type has existed: ${type}`);
@@ -193,8 +211,14 @@ function createSource(processor, discrete) {
     // The system_hook is used for developer to control 'waiting' and something necessary.
     let sm = creatStateMachine(type);
     let currentWorkUnit;
+
     // createDispatch will return it.
+
     function dispatch(payload) {
+      if (currentResetCounts !== resetCounts) {
+        console.log(`Invalid dispatch, because the source has reseted, the type is ${type}`);
+        return
+      }
       if (!discrete && waiting) {
         throw new Error(`
           Can\'t dispatch action while sequence source is being processed,
@@ -203,7 +227,7 @@ function createSource(processor, discrete) {
           The current type is ${type}.
         `);
       }
-      if (currentWorkUnit) {
+      if (currentWorkUnit && discrete) {
         currentWorkUnit.interrupt();
       }
       let workUnit = sm.createWorkUnit();
@@ -215,7 +239,7 @@ function createSource(processor, discrete) {
       let group = findGroup(type);
       if (group) {
         // current interrupt
-        group[3] = (workUnit.interrupt);
+        group[3] = workUnit.interrupt;
       }
 
       workUnit.startWork(action);
@@ -242,7 +266,7 @@ function createSource(processor, discrete) {
       HOOK_ORDER_MAP["before"].system
     );
     // observers' hooks
-    observers[0].forEach((fn) => sm.hook("before", fn, HOOK_ORDER_MAP["before"].observer));
+    filterNullValues(observers[0]).forEach((fn, i) => unloaders[0][i][type] = sm.hook("before", fn, HOOK_ORDER_MAP["before"].observer))
 
     // Binds Hooks for 'after'
     // system hook
@@ -259,7 +283,7 @@ function createSource(processor, discrete) {
       HOOK_ORDER_MAP["before"].system
     );
     // observers' hooks
-    observers[1].forEach((fn) => sm.hook("after", fn, HOOK_ORDER_MAP["after"].observer));
+    filterNullValues(observers[1]).forEach((fn, i) => unloaders[1][i][type] = sm.hook("after", fn, HOOK_ORDER_MAP["after"].observer));
 
     // Bind Hooks for 'interrupt'
     sm.hook(
@@ -275,9 +299,9 @@ function createSource(processor, discrete) {
     );
 
     // observers' hooks
-    observers[2].forEach((fn) => sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer));
+    filterNullValues(observers[2]).forEach((fn, i) => unloaders[2][i][type] = sm.hook("interrupt", fn, HOOK_ORDER_MAP["interrupt"].observer));
 
-    record(type, sm, dispatch, () => { });
+    record(type, sm, dispatch);
     return dispatch;
   }
 
@@ -313,7 +337,10 @@ function createSource(processor, discrete) {
 
   function reset() {
     groups.forEach((group) => {
-      group[3]();
+      // interrupts all available action.
+      if (_typeof(group[3]) === 'function'){
+        group[3]();
+      }
       group[1].reset();
     });
     groups = [];
@@ -322,7 +349,9 @@ function createSource(processor, discrete) {
     }
     inspector = createInspector();
     observers = [[], [], []];
+    unloaders = [[], [], []];
     waiting = false;
+    resetCounts++
   }
 
   return {
