@@ -49,6 +49,8 @@ export default function applyMiddleware(source, ...middlewares) {
     ...util,
   }
 
+  let createDispatches = null;
+
   let createDispatch = currentMiddlewares.reverse().reduce(
     (latestCreateDispatch, middleware, index) => {
       if (_typeof(latestCreateDispatch) !== 'function') {
@@ -64,6 +66,7 @@ export default function applyMiddleware(source, ...middlewares) {
         createDispatch: latestCreateDispatch,
         createDispatches: latestCreateDispatches
       });
+      createDispatches = latestCreateDispatches;
       return nextLatestCreateDispatch;
     },
     initialCreateDispatch
@@ -74,5 +77,6 @@ export default function applyMiddleware(source, ...middlewares) {
   return {
     ...source,
     createDispatch,
+    createDispatches
   }
 }

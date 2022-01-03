@@ -711,6 +711,7 @@ var divider = (function (exports) {
       createDispatch: initialCreateDispatch
     }, util);
 
+    var createDispatches = null;
     var createDispatch = currentMiddlewares.reverse().reduce(function (latestCreateDispatch, middleware, index) {
       if (_typeof(latestCreateDispatch) !== 'function') {
         throw new Error("\n          The middleware ".concat(currentMiddlewares.length - index, " is invalid,\n          middleware must return a function that decorates 'createDispatch' by it.\n        "));
@@ -730,11 +731,13 @@ var divider = (function (exports) {
         createDispatch: latestCreateDispatch,
         createDispatches: latestCreateDispatches
       }));
+      createDispatches = latestCreateDispatches;
       return nextLatestCreateDispatch;
     }, initialCreateDispatch);
     hasConstructed = true;
     return _objectSpread2(_objectSpread2({}, source), {}, {
-      createDispatch: createDispatch
+      createDispatch: createDispatch,
+      createDispatches: createDispatches
     });
   }
 
