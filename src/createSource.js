@@ -22,14 +22,14 @@ import createLog from "./util/log";
  */
 
 const HOOK_ORDER_MAP = {
-  before: {
+  start: {
     system: 0,
     // any
     observer: 1,
     // specific
     user: 2,
   },
-  after: {
+  end: {
     observer: 0,
     user: 1,
     system: 2,
@@ -137,10 +137,10 @@ export default function createSource(processor, discrete, option = DEFAULT_OPTIO
     let positon = 0;
     switch (index) {
       case 0:
-        positon = HOOK_ORDER_MAP['before'].user;
+        positon = HOOK_ORDER_MAP['start'].user;
         break;
       case 1:
-        positon = HOOK_ORDER_MAP['after'].user;
+        positon = HOOK_ORDER_MAP['end'].user;
         break;
       case 2:
         positon = HOOK_ORDER_MAP['interrupt'].user;
@@ -152,20 +152,20 @@ export default function createSource(processor, discrete, option = DEFAULT_OPTIO
       tag,
       // this function looks like 'reloadsing of function'.
       (arg1, arg2) => {
-        let isBefore = index === 0;
-        let isAfter = index === 1;
+        let isStart = index === 0;
+        let isEnd = index === 1;
         let isInterrupt = index == 2;
         if (isInterrupt && arg1 === type) {
           // fn(action.type)
           fn(type);
           return;
         }
-        if (isBefore) {
+        if (isStart) {
           // fn(action);
           fn(arg1);
           return;
         }
-        if (isAfter) {
+        if (isEnd) {
           // fn(datasource, action)
           fn(arg1, arg2);
           return;
@@ -230,34 +230,34 @@ export default function createSource(processor, discrete, option = DEFAULT_OPTIO
     }
     // Bind hooks:
 
-    // Hooks for 'before':
+    // Hooks for 'start':
     // system
     sm.hook(
-      "before",
+      "start",
       () => {
         waiting = true;
         if (discrete) {
           waiting = false;
         }
       },
-      HOOK_ORDER_MAP["before"].system
+      HOOK_ORDER_MAP["start"].system
     );
     // observers' hooks
-    filterNullValues(observers[0]).forEach((fn, i) => unloaders[0][i][type] = sm.hook("before", fn, HOOK_ORDER_MAP["before"].observer))
+    filterNullValues(observers[0]).forEach((fn, i) => unloaders[0][i][type] = sm.hook("start", fn, HOOK_ORDER_MAP["start"].observer))
 
-    // Binds Hooks for 'after'
+    // Binds Hooks for 'end'
     // system hook
     sm.hook(
-      'after',
+      'end',
       () => {
         if (!discrete) {
           waiting = false;
         }
       },
-      HOOK_ORDER_MAP["before"].system
+      HOOK_ORDER_MAP["end"].system
     );
     // observers' hooks
-    filterNullValues(observers[1]).forEach((fn, i) => unloaders[1][i][type] = sm.hook("after", fn, HOOK_ORDER_MAP["after"].observer));
+    filterNullValues(observers[1]).forEach((fn, i) => unloaders[1][i][type] = sm.hook("end", fn, HOOK_ORDER_MAP["end"].observer));
 
     // Bind Hooks for 'interrupt'
     sm.hook(

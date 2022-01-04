@@ -14,19 +14,28 @@ export interface Dispatch<T> {
   (arg: T): void;
 }
 
-declare interface Cancel {
+export declare interface Cancel {
   (): void;
 }
 
-export function Observe<T, U>(
-  tag: Tag,
-  fn: ((action: ActionWithPayload<T>) => void) | ((datasource: T, action: ActionWithPayload<U>) => void)
-): Cancel;
-export function Observe<T, U>(
-  target: string,
-  tag: Tag,
-  fn: ((action: ActionWithPayload<T>) => void) | ((datasource: T, action: ActionWithPayload<U>) => void)
-): Cancel;
+export declare interface HookForStart<T> {
+  (action: ActionWithPayload<T>): void;
+}
+
+export declare interface HookForEnd<T, U> {
+  (datasource: T, action: ActionWithPayload<U>): void;
+}
+
+export declare interface HookForInterrupt {
+  (type: string): void
+}
+
+export function Observe(target: string, tag: "interrupt" | 2 | "2", fn: HookForInterrupt): Cancel;
+export function Observe<T>(target: string, tag: "start" | 0 | "0", fn: HookForStart<T>): Cancel;
+export function Observe<T, U>(target: string, tag: "end" | 1 | "1", fn: HookForEnd<T, U>): Cancel;
+export function Observe(tag: "interrupt" | 2 | "2", fn: HookForInterrupt): Cancel;
+export function Observe<T>(tag: "start" | 0 | "0", fn: HookForStart<T>): Cancel;
+export function Observe<T, U>(tag: "end" | 1 | "1", fn: HookForEnd<T, U>): Cancel;
 
 export function DispatchesCreator<T>(t1: string): [Dispatch<T>];
 export function DispatchesCreator<T, U>(t1: string, t2: string): [Dispatch<T>, Dispatch<U>];
@@ -38,9 +47,13 @@ export function DispatchesCreator<T, U, S, E, C, G, H>(t1: string, t2: string, t
 export function DispatchesCreator<T, U, S, E, C, G, H, I>(t1: string, t2: string, t3: string, t4: string, t5: string, t7: string, t8: string): [Dispatch<T>, Dispatch<U>, Dispatch<S>, Dispatch<E>, Dispatch<C>, Dispatch<G>, Dispatch<H>, Dispatch<I>];
 export function DispatchesCreator(...args: string[]): Dispatch<any>[];
 
+export declare interface CreateDispatch {
+  <T>(type: string): Dispatch<T>;
+}
+
 export interface Source {
   observe: typeof Observe;
-  createDispatch<T>(type: string): Dispatch<T>;
+  createDispatch: CreateDispatch;
   createDispatches: typeof DispatchesCreator;
   dispatch<T>(action: ActionWithPayload<T>): Dispatch<T>;
   interrupt: (type: string) => void;
@@ -51,14 +64,12 @@ export interface Source {
 }
 
 export interface Notify {
-  <T, U>(datasource: T, action: ActionWithPayload<U>): void;
+  <T>(datasource: T, action: ActionWithPayload<any>): void;
 }
 
 export interface Processor {
   (action: ActionWithPayload<any>, notify: Notify): void | boolean;
 }
-
-export type Tag = "before" | 0 | "0" | "after" | 1 | "1" | "2" | "interrupt" | 2;
 
 export interface Option {
   tip: {
@@ -72,18 +83,18 @@ declare interface SourceCreator {
 export const createSource: SourceCreator;
 
 declare interface ProcessorCombiner {
-  (...processors?: Processor[]): Processor
+  (...processors: Processor[]): Processor
 }
 export const combineProcessor: ProcessorCombiner;
 
-declare interface MiddleWare {
+export declare interface MiddleWare {
   (source: _Pick<Source, 'observe' | 'createDispatch' | 'createDispatches' | 'hasType' | 'isDiscrete' | 'isWaiting'>)
     :
-    <T>(type: string) => Dispatch<T>
+    CreateDispatch
 }
 
 declare interface MiddleWareApplier {
-  (source: Source, ...middlewares?: MiddleWare[]): Source
+  (source: Source, ...middlewares: MiddleWare[]): Source
 }
 export const applyMiddleware: MiddleWareApplier;
 
@@ -93,3 +104,9 @@ declare interface ProcessorDecorater {
 }
 
 export const decorateProcessor: ProcessorDecorater;
+
+// deprecated
+export type Tag = "start" | 0 | "0" | "end" | 1 | "1" | "2" | "interrupt" | 2;
+export type TagForStart = "start" | 0 | "0";
+export type TagForEnd = "end" | 1 | "1";
+export type TagForInterrupt = "interrupt" | 2 | "2";

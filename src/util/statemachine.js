@@ -2,10 +2,10 @@ import _typeof from "./typeof";
 import filterNullValues from "./filterNullValues";
 
 const indexMap = [
-  ["before", 0],
+  ["start", 0],
   [0, 0],
   ["0", 0],
-  ["after", 1],
+  ["end", 1],
   [1, 1],
   ["1", 1],
   ["interrupt", 2],
@@ -22,7 +22,7 @@ function transformIndex(key) {
 
 /**
  * Matchs value by tag if none, throw error.
- * @param {"before" | 0 | "0" | "after" | "1" | 1 | "interrupt" | "2" | 2 } tag as index
+ * @param {"start" | 0 | "0" | "end" | "1" | 1 | "interrupt" | "2" | 2 } tag as index
  * @returns {number} indexed value
  */
 export function validateTag(tag) {
@@ -30,7 +30,7 @@ export function validateTag(tag) {
   if (_typeof(index) === 'undefined') {
     throw new Error(`
       Invalid tag, expected:
-      "before", "0", 0, "after", "1", 1, "interrupt", "2", 2.
+      "start", "0", 0, "end", "1", 1, "interrupt", "2", 2.
       Instead, received: ${tag}
     `)
   }
@@ -55,7 +55,7 @@ function _flat(hooks) {
  * `interrupt`: Will not notify observers in this processing.
  */
 export default function creatStateMachine(target, log = console.log) {
-  // 0 -> before, 1 -> after 2 -> interrupt
+  // 0 -> start, 1 -> end 2 -> interrupt
   let hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   let name = target;
   let currentInterrupt;

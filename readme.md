@@ -35,18 +35,18 @@ function createDispatched(...types:string): Dispatch[];
 ```
 
 ``` javascript
-// tag: What time we observe all action, started processing or after processed. "0" ,"before" and 0 are the former. 
-//     "1","after" and 1 are the latter. If tag is 2, we can observe interrupting of action.
-// fn: What we do, at time any action is observed. At "before", accepts one parameter called action; At "after" , 
+// tag: What time we observe all action, started processing or after processed. "0" ,"start" and 0 are the former. 
+//     "1","end" and 1 are the latter. If tag is 2, we can observe interrupting of action.
+// fn: What we do, at time any action is observed. At "start", accepts one parameter called action; At "end" , 
 //     two parameters called data source and action; At "interrupt" accepts the type.
-function observe(tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel;
+function observe(tag: "0" | "start" | 0 | "1" | "end" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel;
 ```
 
 ``` javascript
 // type: delimit our callback
 // tag:  please see the above observe
 // fn:   please see the above observe
-function observe(type: string, tag: "0" | "before" | 0 | "1" | "after" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel
+function observe(type: string, tag: "0" | "start" | 0 | "1" | "end" | 1 | "2" | "interrupt" | 2 , fn: Function): Cancel
 ```
 **Note: Observations of any action must be created before dispatch created. We only observe specific action after dispatch created.**
 
