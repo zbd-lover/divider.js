@@ -1,5 +1,5 @@
 type _Pick<T, K extends keyof T> = {
-  [keys in K]: T[K];
+  [key in K]: T[key];
 };
 
 export interface Action {
@@ -87,10 +87,15 @@ declare interface ProcessorCombiner {
 }
 export const combineProcessor: ProcessorCombiner;
 
+interface MDSource extends Source {
+  _PURE_createDispatch: CreateDispatch,
+  _PURE_createDispatches: typeof DispatchesCreator
+}
+
 export declare interface MiddleWare {
-  (source: _Pick<Source, 'observe' | 'createDispatch' | 'createDispatches' | 'hasType' | 'isDiscrete' | 'isWaiting'>)
+  (source: _Pick<MDSource, 'observe' | 'createDispatch' | 'createDispatches' | 'hasType' | 'isDiscrete' | 'isWaiting' | '_PURE_createDispatch' | '_PURE_createDispatches'>)
     :
-    CreateDispatch
+    <T>(type:string) => Dispatch<T>
 }
 
 declare interface MiddleWareApplier {
@@ -100,7 +105,7 @@ export const applyMiddleware: MiddleWareApplier;
 
 declare interface ProcessorDecorater {
   // previous result: (action: ActionWithPayload<any>, notify: Notify): void | boolean;
-  (processor: Processor): (action: ActionWithPayload<any>, notify: Notify) => boolean;
+  (processor: Processor, types: string[]): (action: ActionWithPayload<any>, notify: Notify) => boolean;
 }
 
 export const decorateProcessor: ProcessorDecorater;

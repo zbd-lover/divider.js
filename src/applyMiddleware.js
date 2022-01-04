@@ -38,6 +38,7 @@ export default function applyMiddleware(source, ...middlewares) {
   }
 
   let _PURE_createDispatch = initialCreateDispatch;
+  let _PURE_createDispatches = (...types) => types.map((type) => _PURE_createDispatch(type));
 
   let util = {
     isWaiting: () => source.isWaiting(),
@@ -53,6 +54,7 @@ export default function applyMiddleware(source, ...middlewares) {
     // If we need create a dispatch that isn't affected by 'createDispatch'
     // that has been decorated by other middlewares, just use it.
     _PURE_createDispatch,
+    _PURE_createDispatches,
     // Function 'createDispatches' is decorated by system automatically, so use it directly.
     // Tool, only be used.
     ...util,

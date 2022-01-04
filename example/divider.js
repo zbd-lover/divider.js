@@ -719,6 +719,17 @@ var divider = (function (exports) {
     };
 
     var _PURE_createDispatch = initialCreateDispatch;
+
+    var _PURE_createDispatches = function _PURE_createDispatches() {
+      for (var _len2 = arguments.length, types = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        types[_key2] = arguments[_key2];
+      }
+
+      return types.map(function (type) {
+        return _PURE_createDispatch(type);
+      });
+    };
+
     var util = {
       isWaiting: function isWaiting() {
         return source.isWaiting();
@@ -740,7 +751,8 @@ var divider = (function (exports) {
       createDispatch: initialCreateDispatch,
       // If we need create a dispatch that isn't affected by 'createDispatch'
       // that has been decorated by other middlewares, just use it.
-      _PURE_createDispatch: _PURE_createDispatch
+      _PURE_createDispatch: _PURE_createDispatch,
+      _PURE_createDispatches: _PURE_createDispatches
     }, util);
 
     var createDispatches = null;
@@ -750,8 +762,8 @@ var divider = (function (exports) {
       }
 
       var latestCreateDispatches = function latestCreateDispatches() {
-        for (var _len2 = arguments.length, types = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          types[_key2] = arguments[_key2];
+        for (var _len3 = arguments.length, types = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+          types[_key3] = arguments[_key3];
         }
 
         return types.map(function (type) {

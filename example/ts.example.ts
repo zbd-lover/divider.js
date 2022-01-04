@@ -1,4 +1,5 @@
-import { Processor, createSource, ActionWithPayload } from '../index';
+import { applyMiddleware } from './../index.d';
+import { Processor, createSource, ActionWithPayload, MiddleWare, CreateDispatch } from '../index';
 
 interface Person {
   name: string
@@ -64,4 +65,11 @@ source.observe<Person[], Person>("add", "end", (ds, action) => {
   // action.payload: Person
   console.log(ds.every);
   console.log(action.type);
-})
+});
+
+const middleware: MiddleWare = (src) => {
+  return (type) => {
+    console.log(`${type} is created.`);
+    return src.createDispatch(type)
+  }
+}
