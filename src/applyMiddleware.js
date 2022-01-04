@@ -17,6 +17,10 @@ export default function applyMiddleware(source, ...middlewares) {
     console.warn(`Each middleware must be a function, the number of non functions is ${middlewares.length - currentMiddlewares.length}`);
   }
 
+  if (currentMiddlewares.length === 0) {
+    return source;
+  }
+
   let hasConstructed = false;
 
   let dispatchRefs = {
@@ -33,6 +37,8 @@ export default function applyMiddleware(source, ...middlewares) {
     return (payload) => dispatchRefs[`${hasConstructed ? 'valid' : 'invalid'}`][type](payload);
   }
 
+  let _PURE_createDispatch = initialCreateDispatch;
+
   let util = {
     isWaiting: () => source.isWaiting(),
     hasType: (type) => source.hasType(type),
@@ -44,8 +50,11 @@ export default function applyMiddleware(source, ...middlewares) {
   let middlewareAPI = {
     // We usually will decorate it.
     createDispatch: initialCreateDispatch,
+    // If we need create a dispatch that isn't affected by 'createDispatch'
+    // that has been decorated by other middlewares, just use it.
+    _PURE_createDispatch,
     // Function 'createDispatches' is decorated by system automatically, so use it directly.
-    // Tools, only be used.
+    // Tool, only be used.
     ...util,
   }
 

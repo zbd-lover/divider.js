@@ -1,6 +1,6 @@
-interface _Pick<T, K extends keyof T> {
-  [key: K]: T[K]
-}
+type _Pick<T, K extends keyof T> = {
+  [keys in K]: T[K];
+};
 
 export interface Action {
   type: String;
@@ -60,13 +60,19 @@ export interface Processor {
 
 export type Tag = "before" | 0 | "0" | "after" | 1 | "1" | "2" | "interrupt" | 2;
 
+export interface Option {
+  tip: {
+    statemachine: boolean
+  },
+}
+
 declare interface SourceCreator {
-  (processor: Processor, discrete: boolean): Source
+  (processor: Processor, discrete?: boolean, option?: Option): Source
 }
 export const createSource: SourceCreator;
 
 declare interface ProcessorCombiner {
-  (...processors: Processor[]): Processor
+  (...processors?: Processor[]): Processor
 }
 export const combineProcessor: ProcessorCombiner;
 
@@ -77,12 +83,12 @@ declare interface MiddleWare {
 }
 
 declare interface MiddleWareApplier {
-  (source: Source, ...middlewares: MiddleWare): Source
+  (source: Source, ...middlewares?: MiddleWare[]): Source
 }
 export const applyMiddleware: MiddleWareApplier;
 
 declare interface ProcessorDecorater {
-  // before: (action: ActionWithPayload<any>, notify: Notify): void | boolean;
+  // previous result: (action: ActionWithPayload<any>, notify: Notify): void | boolean;
   (processor: Processor): (action: ActionWithPayload<any>, notify: Notify) => boolean;
 }
 

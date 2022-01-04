@@ -26,17 +26,24 @@
       // inner processor;
       function processorForLogger(action, notify) {
         console.log(`I'm logger processor.`)
-        logs.forEach((text) => console.log(text));
+        if (action.type === 'log') {
+          logs.forEach((text) => console.log(text));
+        }
+        if (action.type === 'duck') {
+          console.log('duck runs away from police');
+        }
         notify();
       }
 
       let print;
+      let duck;
 
       // middleware
       function logger(api) {
         console.log(api);
-        const { createDispatch, observe } = api;
+        const { createDispatch, observe, _PURE_createDispatch } = api;
         print = createDispatch('log');
+        duck = _PURE_createDispatch("duck");
         // print(); // It's not allowed.
 
         return (type) => {
@@ -49,9 +56,12 @@
 
       return {
         middleware: logger,
-        processor: decorateProcessor(processorForLogger, ['log']),
+        processor: decorateProcessor(processorForLogger, ['log', 'duck']),
         print: (...args) => {
           print(...args)
+        },
+        duck: (...args) => {
+          duck(...args);
         }
       }
     }
@@ -66,7 +76,7 @@
           console.log(`How a cute ${type} pet, but i'm a police.`);
           return (action) => console.error(`It's invalid.`);
         }
-        return createDispatch(type)
+        return createDispatch(type);
       }
     }
 
@@ -77,9 +87,9 @@
       logger.middleware, police
     );
 
+    const [dog, cat, duck] = source.createDispatches("dog", "cat", "duck");
     const add = source.createDispatch("add");
-    const duck = source.createDispatch("duck");
-
+    
   </script>
 </body>
 

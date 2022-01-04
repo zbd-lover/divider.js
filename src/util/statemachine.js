@@ -46,6 +46,7 @@ function _flat(hooks) {
  * Each 'dispatch' should own respective state machine,
  * so we can be able to observe status of each task.
  * @param {string} target user
+ * @param {Function} log prints tips of statemachine workflows.
  * @returns {StateMachine} 
  * `hook`, `reset`, `createWorkUnit`, they are functions.
  * `hook` let's do something before state machine works or after worked.
@@ -53,11 +54,11 @@ function _flat(hooks) {
  * `startWork` and `endWork` is used for marking machine's status,
  * `interrupt`: Will not notify observers in this processing.
  */
-export default function creatStateMachine(target, interactive = true) {
+export default function creatStateMachine(target, log = console.log) {
   // 0 -> before, 1 -> after 2 -> interrupt
   let hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
   let name = target;
-  let currentInterrupt;  
+  let currentInterrupt;
 
   function hook(tag, fn, pos) {
     let index = validateTag(tag);
@@ -78,7 +79,7 @@ export default function creatStateMachine(target, interactive = true) {
   let uid = 1;
 
   function createWorkUnit() {
-    let cuid = uid++;
+    let wuid = uid++;
     let processing;
     let interrupted = false;
 
@@ -105,31 +106,31 @@ export default function creatStateMachine(target, interactive = true) {
     };
 
     function interrupt() {
-      if (interrupted && interactive) {
-        console.log(`No impact of this interruption, because state machine named ${name} has interrupted, the uid: ${cuid}.`)
+      if (interrupted) {
+        log(`No impact of this interruption, because state machine has interrupted, name is ${name}-${wuid}.`)
         return;
       }
-      if (!processing && interactive) {
+      if (!processing) {
         if (_typeof(processing) === 'undefined') {
-          console.log(`No impact of this interruption, because state machine has not worked, the uid: ${cuid}.`);
+          log(`
+            No impact of this interruption, because state machine has not worked, name is ${name}-${wuid}.`
+          );
           return;
         }
         if (_typeof(processing) === 'boolean') {
-          console.log(`No impact of this interruption, because state machine has worked, the uid: ${cuid}.`);
+          log(`No impact of this interruption, because state machine has worked, name is ${name}-${wuid}.`);
           return;
         }
-        console.log(`State Machine can be interrupted only after working or before ended, the uid: ${cuid}.`);
+        log(`State Machine can be interrupted only after working or before ended, name is ${name}-${wuid}.`);
         return;
       }
 
       interrupted = true;
       processing = false;
-      
+
       filterNullValues(_flat(hooksMap[2])).forEach((hook) => hook(name));
-      if (interactive) {
-        console.log(`State Machine named ${name} is interrupted, the uid: ${cuid}.`);
-        console.log(`---------------`);
-      }
+      log(`State Machine named ${name} is interrupted, the uid: ${wuid}.`);
+      log(`---------------`);
     }
 
     currentInterrupt = interrupt;

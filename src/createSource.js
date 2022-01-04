@@ -2,6 +2,7 @@ import _typeof from "./util/typeof";
 import filterNullValues from "./util/filterNullValues";
 import verifyShape from "./util/verifyShape";
 import creatStateMachine, { validateTag } from "./util/statemachine";
+import createLog from "./util/log";
 
 /**
  * 每一个action都有自己对应的state machine,
@@ -40,12 +41,19 @@ const HOOK_ORDER_MAP = {
   }
 }
 
+const DEFAULT_OPTION = {
+  tip: {
+    statemachine: false
+  }
+}
+
 /**
  * @param {Processor} processor is consist of all relative operations of data.
  * @param {Boolean} discrete decides the relative ops is 'discrete' or 'sequence'.
+ * @param {Option} option extra config
  * @returns {Source} let's observe specific op of source and dispatch them.
  */
-export default function createSource(processor, discrete) {
+export default function createSource(processor, discrete, option = DEFAULT_OPTION) {
   if (_typeof(processor) !== 'function') {
     throw new Error(`Expected the process as a function. Instead, received: ${_typeof(processor)}`);
   }
@@ -108,7 +116,7 @@ export default function createSource(processor, discrete) {
     let len = observers[index].length;
     observers[index][len] = fn;
     unloaders[index][len] = {};
-    let released = false; 
+    let released = false;
     return () => {
       if (!released && unloaders[index].length >= len) {
         for (let [, unload] of Object.entries(unloaders[index][len])) {
@@ -168,6 +176,8 @@ export default function createSource(processor, discrete) {
     );
   }
 
+  const logOfStateMachine = createLog(option.tip.statemachine);
+
   /**
    * Creates a dispatch for task you want.
    * We need 'pre-create' the each dispatch with the 'type', then, just use these dispatches.
@@ -191,7 +201,7 @@ export default function createSource(processor, discrete) {
     // This state machine own three kinds of hook, they are: system_hook, observer_hook and custom_hook(user_hook).
     // The observe_hook's action like middleware, because it can observe any dispatch of one source.
     // The system_hook is used for developer to control 'waiting' and something necessary.
-    let sm = creatStateMachine(type);
+    let sm = creatStateMachine(type, logOfStateMachine);
 
     // Each calling of dispatch owns individual status.
     // When action with type 'A' is dispatched, the previous action with type 'A' need to be interrupted.

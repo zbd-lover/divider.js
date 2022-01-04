@@ -11,6 +11,21 @@ export default function combineProcessors(...processors) {
     );
   }
 
+  if (currentProcessors.length === 0) {
+    console.warn(`The final processor is 'emtpy', the number of current processors is empty.`)
+    console.warn(`The final function:`)
+    console.warn(`
+      function emptyP(action, notify) {
+        notify(action, action);
+        return true;
+      }
+    `)
+    return function emptyP(action, notify) {
+      notify(action, action);
+      return true;
+    }
+  }
+
   return function finalProcessor(action, notify) {
     for (let i = 0; i < currentProcessors.length; i++) {
       // The action has been processed.

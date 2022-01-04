@@ -14,8 +14,10 @@ React bindings
 ``` javascript
 // processor: Accepts parameter called action and notify, it works by the action, then calls the notify to notify its observers with some responses (manually)
 // discrete:  Whether the processor can do multiple tasks at one time or not.
+// option:    Provides extra functions, default: {tip: {statemachine: true}}
+//            Tips of statemachine workflows will be printed.
 // Source:    It's allow us to observe the processor and dispatch tasks to processor.
-function createSource(processor:Function, discrete:boolean): Source;
+function createSource(processor: Function, discrete?: boolean, option?: Option): Source;
 ```
 
 **Note: if processor do asynchronous operation, we must promise that notify is called when operation was done.**
@@ -65,11 +67,11 @@ function dispatch(action: Action): Dispatch
 The followings are advance API, Please see the example folder.
 
 ``` javascript
-function applyMiddleware(source: Source, ...middlewares: MiddleWare[]): Source;
+function applyMiddleware(source: Source, ...middlewares?: MiddleWare[]): Source;
 ```
 
 ``` javascript
-function combineProcessors(...processors: Processors[]): Processor;
+function combineProcessors(...processors?: Processor[]): Processor;
 ```
 
 ``` javascript

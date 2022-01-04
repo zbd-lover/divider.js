@@ -201,6 +201,7 @@ var divider = (function (exports) {
    * Each 'dispatch' should own respective state machine,
    * so we can be able to observe status of each task.
    * @param {string} target user
+   * @param {Function} log prints tips of statemachine workflows.
    * @returns {StateMachine} 
    * `hook`, `reset`, `createWorkUnit`, they are functions.
    * `hook` let's do something before state machine works or after worked.
@@ -211,7 +212,7 @@ var divider = (function (exports) {
 
 
   function creatStateMachine(target) {
-    var interactive = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var log = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : console.log;
     // 0 -> before, 1 -> after 2 -> interrupt
     var hooksMap = [[[], [], []], [[], [], []], [[], [], []]];
     var name = target;
@@ -238,7 +239,7 @@ var divider = (function (exports) {
     var uid = 1;
 
     function createWorkUnit() {
-      var cuid = uid++;
+      var wuid = uid++;
       var processing;
       var interrupted = false;
 
@@ -273,23 +274,23 @@ var divider = (function (exports) {
       }
 
       function interrupt() {
-        if (interrupted && interactive) {
-          console.log("No impact of this interruption, because state machine named ".concat(name, " has interrupted, the uid: ").concat(cuid, "."));
+        if (interrupted) {
+          log("No impact of this interruption, because state machine has interrupted, name is ".concat(name, "-").concat(wuid, "."));
           return;
         }
 
-        if (!processing && interactive) {
+        if (!processing) {
           if (_typeof(processing) === 'undefined') {
-            console.log("No impact of this interruption, because state machine has not worked, the uid: ".concat(cuid, "."));
+            log("\n            No impact of this interruption, because state machine has not worked, name is ".concat(name, "-").concat(wuid, "."));
             return;
           }
 
           if (_typeof(processing) === 'boolean') {
-            console.log("No impact of this interruption, because state machine has worked, the uid: ".concat(cuid, "."));
+            log("No impact of this interruption, because state machine has worked, name is ".concat(name, "-").concat(wuid, "."));
             return;
           }
 
-          console.log("State Machine can be interrupted only after working or before ended, the uid: ".concat(cuid, "."));
+          log("State Machine can be interrupted only after working or before ended, name is ".concat(name, "-").concat(wuid, "."));
           return;
         }
 
@@ -298,11 +299,8 @@ var divider = (function (exports) {
         filterNullValues(_flat(hooksMap[2])).forEach(function (hook) {
           return hook(name);
         });
-
-        if (interactive) {
-          console.log("State Machine named ".concat(name, " is interrupted, the uid: ").concat(cuid, "."));
-          console.log("---------------");
-        }
+        log("State Machine named ".concat(name, " is interrupted, the uid: ").concat(wuid, "."));
+        log("---------------");
       }
 
       currentInterrupt = interrupt;
@@ -321,6 +319,23 @@ var divider = (function (exports) {
           currentInterrupt();
         }
       }
+    };
+  }
+
+  /**
+   * Logs text conditionally
+   * @param {Boolean} condition 
+   * @returns Function
+   */
+  function createLog(condition) {
+    if (condition) {
+      return function (text) {
+        return text;
+      };
+    }
+
+    return function (text) {
+      return console.log(text);
     };
   }
 
@@ -360,13 +375,21 @@ var divider = (function (exports) {
       system: 2
     }
   };
+  var DEFAULT_OPTION = {
+    tip: {
+      statemachine: false
+    }
+  };
   /**
    * @param {Processor} processor is consist of all relative operations of data.
    * @param {Boolean} discrete decides the relative ops is 'discrete' or 'sequence'.
+   * @param {Option} option extra config
    * @returns {Source} let's observe specific op of source and dispatch them.
    */
 
   function createSource(processor, discrete) {
+    var option = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_OPTION;
+
     if (_typeof(processor) !== 'function') {
       throw new Error("Expected the process as a function. Instead, received: ".concat(_typeof(processor)));
     }
@@ -516,6 +539,8 @@ var divider = (function (exports) {
         console.warn("Unknown index: ".concat(index, ", this means unknown hook."));
       }, positon);
     }
+
+    var logOfStateMachine = createLog(option.tip.statemachine);
     /**
      * Creates a dispatch for task you want.
      * We need 'pre-create' the each dispatch with the 'type', then, just use these dispatches.
@@ -523,7 +548,6 @@ var divider = (function (exports) {
      * @returns {Dispatch} Function A that dispatches action to your processor.
      * If the type specified as string, parameter called action always own 'type' key with the string
      */
-
 
     function createDispatch(type) {
       if (_typeof(type) !== 'string' || !type) {
@@ -538,7 +562,7 @@ var divider = (function (exports) {
       // The system_hook is used for developer to control 'waiting' and something necessary.
 
 
-      var sm = creatStateMachine(type); // Each calling of dispatch owns individual status.
+      var sm = creatStateMachine(type, logOfStateMachine); // Each calling of dispatch owns individual status.
       // When action with type 'A' is dispatched, the previous action with type 'A' need to be interrupted.
 
       var lastWorkUnit;
@@ -671,6 +695,10 @@ var divider = (function (exports) {
       console.warn("Each middleware must be a function, the number of non functions is ".concat(middlewares.length - currentMiddlewares.length));
     }
 
+    if (currentMiddlewares.length === 0) {
+      return source;
+    }
+
     var hasConstructed = false;
     var dispatchRefs = {
       invalid: {},
@@ -690,6 +718,7 @@ var divider = (function (exports) {
       };
     };
 
+    var _PURE_createDispatch = initialCreateDispatch;
     var util = {
       isWaiting: function isWaiting() {
         return source.isWaiting();
@@ -708,7 +737,10 @@ var divider = (function (exports) {
 
     var middlewareAPI = _objectSpread2({
       // We usually will decorate it.
-      createDispatch: initialCreateDispatch
+      createDispatch: initialCreateDispatch,
+      // If we need create a dispatch that isn't affected by 'createDispatch'
+      // that has been decorated by other middlewares, just use it.
+      _PURE_createDispatch: _PURE_createDispatch
     }, util);
 
     var createDispatches = null;
@@ -781,6 +813,16 @@ var divider = (function (exports) {
 
     if (processors.length !== currentProcessors.length) {
       console.warn("\n      Processors must be a array of function, the number of non function is ".concat(processors.length - currentProcessors.length, "."));
+    }
+
+    if (currentProcessors.length === 0) {
+      console.warn("The final processor is 'emtpy', the number of current processors is empty.");
+      console.warn("The final function:");
+      console.warn("\n      function emptyP(action, notify) {\n        notify(action, action);\n        return true;\n      }\n    ");
+      return function emptyP(action, notify) {
+        notify(action, action);
+        return true;
+      };
     }
 
     return function finalProcessor(action, notify) {

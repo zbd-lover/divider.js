@@ -48,7 +48,6 @@
           default:
             break;
         }
-        // program will throw error in 4.5 seconds.
         notify(await query());
       }
 
@@ -99,7 +98,7 @@
         dispatchDel({ id: 11 });
         interrupt("del");
       }, 1000);
-    }, 200);
+    }, 1000);
 
     // setTimeout(() => interrupt("add"), 1000)
   </script>
