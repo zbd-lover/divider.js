@@ -272,22 +272,26 @@ function creatStateMachine(target) {
 
     function interrupt() {
       if (interrupted) {
-        log("No impact of this interruption, because state machine has interrupted, name is ".concat(name, "-").concat(wuid, "."));
+        log("No impact of this interruption, because state machine has interrupted, name is ".concat(name, ", uid is ").concat(wuid, "."));
+        log("Current task's uid is ".concat(wuid + 1));
         return;
       }
 
       if (!processing) {
         if (_typeof(processing) === 'undefined') {
-          log("\n            No impact of this interruption, because state machine has not worked, name is ".concat(name, "-").concat(wuid, "."));
+          log("No impact of this interruption, because state machine has not worked, name is ".concat(name, ", uid is ").concat(wuid, "."));
+          log("Current task's uid is ".concat(wuid + 1));
           return;
         }
 
         if (_typeof(processing) === 'boolean') {
-          log("No impact of this interruption, because state machine has worked, name is ".concat(name, "-").concat(wuid, "."));
+          log("No impact of this interruption, because state machine has worked, name is ".concat(name, ", uid is ").concat(wuid, "."));
+          log("Current task's uid is ".concat(wuid + 1));
           return;
         }
 
-        log("State Machine can be interrupted only after working or before ended, name is ".concat(name, "-").concat(wuid, "."));
+        log("State Machine can be interrupted only after working or before ended, name is ".concat(name, ", uid is ").concat(wuid, "."));
+        log("Current task's uid is ".concat(wuid + 1));
         return;
       }
 
@@ -297,6 +301,7 @@ function creatStateMachine(target) {
         return hook(name);
       });
       log("State Machine named ".concat(name, " is interrupted, the uid: ").concat(wuid, "."));
+      log("Current task's uid is ".concat(wuid + 1));
       log("---------------");
     }
 

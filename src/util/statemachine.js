@@ -107,21 +107,23 @@ export default function creatStateMachine(target, log = console.log) {
 
     function interrupt() {
       if (interrupted) {
-        log(`No impact of this interruption, because state machine has interrupted, name is ${name}-${wuid}.`)
+        log(`No impact of this interruption, because state machine has interrupted, name is ${name}, uid is ${wuid}.`);
+        log(`Current task's uid is ${wuid + 1}`);
         return;
       }
       if (!processing) {
         if (_typeof(processing) === 'undefined') {
-          log(`
-            No impact of this interruption, because state machine has not worked, name is ${name}-${wuid}.`
-          );
+          log(`No impact of this interruption, because state machine has not worked, name is ${name}, uid is ${wuid}.`);
+          log(`Current task's uid is ${wuid + 1}`);
           return;
         }
         if (_typeof(processing) === 'boolean') {
-          log(`No impact of this interruption, because state machine has worked, name is ${name}-${wuid}.`);
+          log(`No impact of this interruption, because state machine has worked, name is ${name}, uid is ${wuid}.`);
+          log(`Current task's uid is ${wuid + 1}`);
           return;
         }
-        log(`State Machine can be interrupted only after working or before ended, name is ${name}-${wuid}.`);
+        log(`State Machine can be interrupted only after working or before ended, name is ${name}, uid is ${wuid}.`);
+        log(`Current task's uid is ${wuid + 1}`);
         return;
       }
 
@@ -130,6 +132,7 @@ export default function creatStateMachine(target, log = console.log) {
 
       filterNullValues(_flat(hooksMap[2])).forEach((hook) => hook(name));
       log(`State Machine named ${name} is interrupted, the uid: ${wuid}.`);
+      log(`Current task's uid is ${wuid + 1}`)
       log(`---------------`);
     }
 
