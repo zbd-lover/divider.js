@@ -656,10 +656,28 @@ function createSource(processor, discrete) {
     return dispatch;
   }
 
+  function replaceDispatch(type, dispatch) {
+    var index = groups.findIndex(function (group) {
+      return group[0] === type;
+    });
+
+    if (index < 0) {
+      console.warn("Replacement failed, doesn't exist the type: ".concat(type, "."));
+      return;
+    }
+
+    if (_typeof(dispatch) !== 'function') {
+      throw new Error("Expected the dispatch as function. Instead, received: ".concat(_typeof(dispatch)));
+    }
+
+    groups[index][2] = dispatch;
+  }
+
   return _objectSpread2(_objectSpread2({}, util), {}, {
     observe: observe,
     interrupt: interrupt,
     createDispatch: createDispatch,
+    replaceDispatch: replaceDispatch,
     createDispatches: createDispatches,
     dispatch: dispatch,
     reset: function reset() {
@@ -670,7 +688,7 @@ function createSource(processor, discrete) {
 
 /**
  * @param {Source} source target
- * @param  {...MiddleWare} middlewares 
+ * @param  {...MiddleWare[]} middlewares 
  * @returns {Source}
  * Note: 
  * Constructing of each middleware is from right to left, but decorating code of `createDispatch` runs from left to right.
@@ -737,7 +755,7 @@ function applyMiddleware(source) {
     isDiscrete: function isDiscrete() {
       return source.isDiscrete();
     },
-    // We usually call it.
+    // We usually use it.
     observe: function observe(type, tag, fn) {
       return source.observe(type, tag, fn);
     }
@@ -753,6 +771,20 @@ function applyMiddleware(source) {
   }, util);
 
   var createDispatches = null;
+  currentMiddlewares.unshift(function (_ref) {
+    var createDispatch = _ref.createDispatch;
+    return function (type) {
+      // 1. Middleware maybe decorate `dispatch`, result of `createDispatch`.
+      // 2. Corrects `dispatch api` of source.
+      var dispatch = createDispatch(type);
+
+      if (source.hasType(type)) {
+        source.replaceDispatch(type, dispatch);
+      }
+
+      return dispatch;
+    };
+  });
   var createDispatch = currentMiddlewares.reverse().reduce(function (latestCreateDispatch, middleware, index) {
     if (_typeof(latestCreateDispatch) !== 'function') {
       throw new Error("\n          The middleware ".concat(currentMiddlewares.length - index, " is invalid,\n          middleware must return a function that decorates 'createDispatch' by it.\n        "));

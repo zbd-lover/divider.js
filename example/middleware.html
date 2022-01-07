@@ -76,7 +76,11 @@
           console.log(`How a cute ${type} pet, but i'm a police.`);
           return (action) => console.error(`It's invalid.`);
         }
-        return createDispatch(type);
+        const _dispatch = createDispatch(type);
+        return function dispatch(payload) {
+          console.log('????');
+          _dispatch(payload)
+        }
       }
     }
 
@@ -89,7 +93,7 @@
 
     const [dog, cat, duck] = source.createDispatches("dog", "cat", "duck");
     const add = source.createDispatch("add");
-    
+
   </script>
 </body>
 

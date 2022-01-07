@@ -8,6 +8,7 @@ export interface Action {
 
 export interface ActionWithPayload<T> extends Action {
   payload?: T;
+  [key: string]: any;
 }
 
 export interface Dispatch<T> {
@@ -51,10 +52,15 @@ export declare interface CreateDispatch {
   <T>(type: string): Dispatch<T>;
 }
 
+export declare interface ReplaceDispatch {
+  (type: string, dispatch: Dispatch<any>): void;
+}
+
 export interface Source {
   observe: typeof Observe;
   createDispatch: CreateDispatch;
   createDispatches: typeof DispatchesCreator;
+  replaceDispatch: ReplaceDispatch,
   dispatch<T>(action: ActionWithPayload<T>): Dispatch<T>;
   interrupt: (type: string) => void;
   hasType: (type: string) => boolean;
@@ -95,7 +101,7 @@ interface MDSource extends Source {
 export declare interface MiddleWare {
   (source: _Pick<MDSource, 'observe' | 'createDispatch' | 'createDispatches' | 'hasType' | 'isDiscrete' | 'isWaiting' | '_PURE_createDispatch' | '_PURE_createDispatches'>)
     :
-    <T>(type:string) => Dispatch<T>
+    <T>(type: string) => Dispatch<T>
 }
 
 declare interface MiddleWareApplier {

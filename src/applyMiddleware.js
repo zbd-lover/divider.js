@@ -2,7 +2,7 @@ import _typeof from "./util/typeof"
 
 /**
  * @param {Source} source target
- * @param  {...MiddleWare} middlewares 
+ * @param  {...MiddleWare[]} middlewares 
  * @returns {Source}
  * Note: 
  * Constructing of each middleware is from right to left, but decorating code of `createDispatch` runs from left to right.
@@ -44,7 +44,7 @@ export default function applyMiddleware(source, ...middlewares) {
     isWaiting: () => source.isWaiting(),
     hasType: (type) => source.hasType(type),
     isDiscrete: () => source.isDiscrete(),
-    // We usually call it.
+    // We usually use it.
     observe: (type, tag, fn) => source.observe(type, tag, fn)
   }
 
@@ -62,6 +62,18 @@ export default function applyMiddleware(source, ...middlewares) {
 
   let createDispatches = null;
 
+  currentMiddlewares.unshift(({ createDispatch }) => {
+    return (type) => {
+      // 1. Middleware maybe decorate `dispatch`, result of `createDispatch`.
+      // 2. Corrects `dispatch api` of source.
+      const dispatch = createDispatch(type);
+      if (source.hasType(type)) {
+        source.replaceDispatch(type, dispatch);
+      }
+      return dispatch;
+    }
+  });
+
   let createDispatch = currentMiddlewares.reverse().reduce(
     (latestCreateDispatch, middleware, index) => {
       if (_typeof(latestCreateDispatch) !== 'function') {
@@ -70,7 +82,7 @@ export default function applyMiddleware(source, ...middlewares) {
           middleware must return a function that decorates 'createDispatch' by it.
         `);
       }
-      
+
       let latestCreateDispatches = (...types) => types.map((type) => latestCreateDispatch(type));
       let nextLatestCreateDispatch = middleware({
         ...middlewareAPI,

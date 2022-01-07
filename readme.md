@@ -64,6 +64,10 @@ function interrupt(type: string): void;
 function dispatch(action: Action): Dispatch
 ```
 
+``` javascript
+function replaceDispatch(type: string, dispatch: Dispatch<any>): void;
+```
+
 The followings are advance API, Please see the example folder.
 
 ``` javascript

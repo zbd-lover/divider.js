@@ -296,11 +296,24 @@ export default function createSource(processor, discrete, option = DEFAULT_OPTIO
     return dispatch;
   }
 
+  function replaceDispatch(type, dispatch) {
+    let index = groups.findIndex((group) => group[0] === type);
+    if (index < 0) {
+      console.warn(`Replacement failed, doesn't exist the type: ${type}.`);
+      return;
+    }
+    if (_typeof(dispatch) !== 'function') {
+      throw new Error(`Expected the dispatch as function. Instead, received: ${_typeof(dispatch)}`);
+    }
+    groups[index][2] = dispatch;
+  }
+
   return {
     ...util,
     observe,
     interrupt,
     createDispatch,
+    replaceDispatch,
     createDispatches,
     dispatch,
     reset: () => console.log(`No effect, the 'reset' api has deprecated.`)
