@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <input placeholder="请输入todo名称" id="input" />
+  <button id="add">添加</button>
+  <button id="del">删除</button>
+  <div>Todo list：</div>
+  <ul id="list"></ul>
+
+  <script src="./divider.js"></script>
+  <script>
+    const array = [];
+
+    const testActionObj = {
+      "add": ({ payload }, notify) => {
+        setTimeout(
+          () => {
+            array.push(payload);
+            notify("增加成功")
+          },
+          100
+        );
+      },
+      "del": ({ payload }, notify) => {
+        setTimeout(
+          () => {
+            const index = array.findIndex((item) => item?.name === payload);
+            if (index >= 0) {
+              array.splice(index, 1);
+              notify("删除成功");
+              return;
+            }
+            notify("删除失败");
+          },
+          100
+        );
+      },
+      "query": ({ payload }, notify) => {
+        setTimeout(
+          () => notify([...array]),
+          100
+        );
+      }
+    }
+
+    // discrete
+    const source = divider.createSource(testActionObj, true);
+    const { subscribe, dispatch } = source;
+
+    subscribe("start", (action = {}) => {
+      const { type, payload } = action;
+      console.log(`名为${type}的任务执行`);
+    })
+
+    subscribe("end", (data, { type, payload }) => {
+      console.log(`任务${type}的响应为:`)
+      console.log(data);
+    });
+
+    subscribe("add", "start", () => console.log('add starts'))
+    subscribe("add", "end", () => console.log('add ends'));
+
+
+    const us1 = subscribe("add", "start", () => console.log('add starts, second subscribe'));
+    const us2 = subscribe("add", "end", () => console.log('add ends, second subscribe'));
+    // 取消订阅
+    us1();
+    us2();
+
+    const list = document.getElementById('list');
+    subscribe("query", "end", (data = []) => {
+      list.innerHTML = "";
+      data.forEach((item) => {
+        const li = document.createElement("li");
+        li.innerText = item?.name
+        list.appendChild(li);
+      });
+    });
+
+    // 自动关联
+    subscribe("end", (data, { type }) => {
+      if (type !== "query") {
+        dispatch({ type: "query" });
+      }
+    });
+
+    const input = document.getElementById("input");
+    document.getElementById("add").addEventListener("click", () => {
+      dispatch({
+        type: "add",
+        payload: {
+          name: input.value
+        }
+      });
+    });
+    document.getElementById("del").addEventListener("click", () => {
+      dispatch({
+        type: "del",
+        payload: input.value
+      });
+    });
+  </script>
+</body>
+
+</html>

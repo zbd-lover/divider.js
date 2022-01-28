@@ -1,7 +1,7 @@
 {
   "name": "divider.js",
-  "version": "3.3.4",
-  "description": "Let's divide our external data, bridge each one easily.",
+  "version": "3.3.6",
+  "description": "Divide a set of relevant operation and side effects in JavaScript apps",
   "main": "lib/divider.js",
   "module": "es/divider.js",
   "typings": "./index.d.ts",
@@ -25,10 +25,12 @@
   },
   "keywords": [
     "divider",
-    "bridger",
-    "external reducer",
-    "reducer",
-    "bridge external datasource"
+    "divider.js",
+    "bridge-redux",
+    "redux-async-answer",
+    "redux-thunk-like",
+    "effect",
+    "redux"
   ],
   "npmName": "dividerjs",
   "author": "zbd",

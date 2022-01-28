@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <h1>Please browser code and open console.</h1>
+  <script src="./divider.js"></script>
+  <script>
+    const testActionObj = {
+      "smoke": (action, notify) => {
+        notify('Wonderful~');
+      },
+      "eat": (action, notify) => {
+        notify(`I have eaten ${action?.payload?.name}~`)
+      },
+      "pray": (action, notify) => {
+        notify(`My gods will bring me lucky~`);
+      }
+    }
+
+
+    const d1 = (lastHandler) => {
+      return (action, notify) => {
+        // console.log("d1 check");
+        if (action.type === "smoke") {
+          notify("No smoking, keep fresh.");
+          return;
+        }
+        lastHandler(action, notify);
+      }
+    }
+    const d2 = (lastHandler) => {
+      return (action, notify) => {
+        // console.log("d2 check");
+        if (action.type === "eat") {
+          notify("No eating, bear hunger.");
+          return;
+        }
+        lastHandler(action, notify);
+      }
+    }
+
+    const newActionObj = divider.decorate(testActionObj, d1, d2);
+    // const newActionObj = divider.decorate(testActionObj, d1);
+    // console.log(newActionObj);
+    const source = divider.createSource(newActionObj, true);
+    console.log(source);
+    const s2 = divider.createSource(testActionObj);
+
+    const { subscribe, dispatch } = source;
+    const smoke = () => dispatch({ type: "smoke" });
+    const eat = (fruit = "furits") => {
+      dispatch({ type: "eat", payload: { name: fruit } })
+    };
+    const pray = () => dispatch({ type: "pray" });
+
+    subscribe("end", (data) => console.log(data));
+
+  </script>
+</body>
+
+</html>

@@ -91,7 +91,7 @@ export const createSource: SourceCreator;
 declare interface ProcessorCombiner {
   (...processors: Processor[]): Processor
 }
-export const combineProcessor: ProcessorCombiner;
+export const combineProcessors: ProcessorCombiner;
 
 interface MDSource extends Source {
   _PURE_createDispatch: CreateDispatch,
@@ -110,14 +110,13 @@ declare interface MiddleWareApplier {
 export const applyMiddleware: MiddleWareApplier;
 
 declare interface ProcessorDecorater {
-  // previous result: (action: ActionWithPayload<any>, notify: Notify): void | boolean;
   (processor: Processor, types: string[]): (action: ActionWithPayload<any>, notify: Notify) => boolean;
 }
 
 export const decorateProcessor: ProcessorDecorater;
 
-// deprecated
-export type Tag = "start" | 0 | "0" | "end" | 1 | "1" | "2" | "interrupt" | 2;
-export type TagForStart = "start" | 0 | "0";
-export type TagForEnd = "end" | 1 | "1";
-export type TagForInterrupt = "interrupt" | 2 | "2";
+declare interface Decorater {
+  (prev): Decorater;
+}
+
+export type Tag = "start" | "end";
