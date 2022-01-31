@@ -190,7 +190,7 @@ var divider = (function (exports) {
     return keys.reduce(function (accm, key) {
       var val = obj[key];
 
-      if (!type || kindOf(val) === type) {
+      if (kindOf(val) === type) {
         accm[key] = obj[key];
         return accm;
       }
@@ -199,6 +199,7 @@ var divider = (function (exports) {
 
   var START = "start";
   var END = "end";
+  var INTERRUPT = "ignore";
 
   var WorkUnit = /*#__PURE__*/function () {
     function WorkUnit(name) {
@@ -206,9 +207,10 @@ var divider = (function (exports) {
 
       this.name = name; // hooks[0] -> hooks of `start`
       // hooks[1] -> hooks of `end`
+      // hooks[1] -> hooks of ignore
       // fns in hooks[0][0] is always called before fns in hooks[0][1]
 
-      this.hooks = [[[], []], [[], []]];
+      this.hooks = [[[], []], [[], []], [[], []]];
       this.working = false;
       this.interrupted = false;
     }
@@ -223,7 +225,7 @@ var divider = (function (exports) {
         var index = WorkUnit.indexOfTag(tag);
 
         if (index === -1) {
-          throw new Error("Expected the tag must be ".concat(START, " or ").concat(END, ", Instead, received: ").concat(tag, "."));
+          throw new Error("Expected the tag must be ".concat(START, "\u3001").concat(END, " or ").concat(INTERRUPT, ", Instead, received: ").concat(tag, "."));
         }
 
         var array = this.hooks[index][pos];
@@ -267,9 +269,16 @@ var divider = (function (exports) {
       }
     }, {
       key: "interrupt",
-      value: function interrupt() {
+      value: function interrupt(active, action) {
         this.working = false;
         this.interrupted = true;
+
+        if (active) {
+          var hooks = this.hooks[2].flat();
+          hooks.forEach(function (hook) {
+            return hook(action);
+          });
+        }
       }
     }, {
       key: "isWorking",
@@ -279,7 +288,7 @@ var divider = (function (exports) {
     }], [{
       key: "isValidTag",
       value: function isValidTag(tag) {
-        return tag === START || tag === END;
+        return tag === START || tag === END || tag === INTERRUPT;
       }
     }, {
       key: "indexOfTag",
@@ -288,7 +297,7 @@ var divider = (function (exports) {
           return -1;
         }
 
-        return tag === START ? 0 : 1;
+        return tag === START ? 0 : tag === END ? 1 : 2;
       }
     }]);
 
@@ -304,9 +313,9 @@ var divider = (function (exports) {
 
   var _excluded = ["type"];
 
-  var Source = /*#__PURE__*/function () {
-    function Source(actionObj, discrete) {
-      _classCallCheck(this, Source);
+  var Divider = /*#__PURE__*/function () {
+    function Divider(actionObj, discrete) {
+      _classCallCheck(this, Divider);
 
       this.discrete = !!discrete;
       this.errorHandler = null;
@@ -316,7 +325,7 @@ var divider = (function (exports) {
       this.init(actionObj);
     }
 
-    _createClass(Source, [{
+    _createClass(Divider, [{
       key: "init",
       value: function init(actionObj) {
         if (!isPlainObject(actionObj)) {
@@ -333,7 +342,7 @@ var divider = (function (exports) {
       key: "replaceActionObj",
       value: function replaceActionObj(obj) {
         if (this.isWorking()) {
-          throw new Error("Can't replace 'action-object' while source working.");
+          throw new Error("Can't replace 'action-object' while working.");
         }
 
         this.init(obj);
@@ -351,8 +360,8 @@ var divider = (function (exports) {
         });
       }
     }, {
-      key: "canWork",
-      value: function canWork() {
+      key: "canDispatch",
+      value: function canDispatch() {
         return this.discrete ? true : !this.isWorking();
       }
     }, {
@@ -377,8 +386,8 @@ var divider = (function (exports) {
         });
       }
     }, {
-      key: "getCurrentTaskNames",
-      value: function getCurrentTaskNames() {
+      key: "getStatus",
+      value: function getStatus() {
         var names = this.workUnits.filter(function (wu) {
           return wu.isWorking();
         }).map(function (wu) {
@@ -390,7 +399,7 @@ var divider = (function (exports) {
       key: "subscribe",
       value: function subscribe(name, tag, fn) {
         if (this.isWorking()) {
-          throw new Error("\n        Can't subscribe source while working.");
+          throw new Error("\n        Can't subscribe while working.");
         }
 
         var position,
@@ -449,30 +458,42 @@ var divider = (function (exports) {
           throw new Error("Unknown task: ".concat(nextName, "."));
         }
 
-        if (!this.canWork()) {
-          var currName = this.getCurrentWorkName();
-          throw new Error("\n        Can't do task named ".concat(currName, ".\n        In sequence (not discrete) mode, each task only do one by one,\n        the current task named ").concat(nextName, "."));
+        if (!this.canDispatch()) {
+          var currName = this.getStatus();
+          throw new Error("\n        Can't dispatch action, action.type is ".concat(nextName, ".\n        In sequence (not discrete) mode, we only dispatch action one by one,\n        the current working action.type is ").concat(currName, "."));
         }
 
-        var workUnit = this.getWorkUnit(nextName);
-        workUnit.start(action); // Notify is called in custom task function manually.
+        var workUnit = this.getWorkUnit(nextName); // notify is called in custom task function manually.
 
-        var notify = function notify(response) {
-          return workUnit.end(response, action);
+        var notify = function notify(response, $action) {
+          return workUnit.end(response, $action);
         };
 
         var task = this.getTask(nextName);
+        workUnit.start(action);
 
         try {
-          task(action, function (response) {
-            return notify && notify(response, action);
+          task(action, function () {
+            for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+              args[_key] = arguments[_key];
+            }
+
+            var response = args[0],
+                _args$ = args[1],
+                $action = _args$ === void 0 ? action : _args$;
+
+            if (notify && args.length > 0) {
+              notify(response, $action);
+            } else if (args.length === 0) {
+              workUnit.interrupt(true, $action);
+            }
           });
         } catch (e) {
           var type = action.type,
               rest = _objectWithoutProperties(action, _excluded);
 
           notify = null;
-          workUnit.interrupt();
+          workUnit.interrupt(false);
 
           if (this.errorHandler) {
             this.errorHandler({
@@ -489,7 +510,7 @@ var divider = (function (exports) {
       }
     }]);
 
-    return Source;
+    return Divider;
   }();
 
   function stack() {
@@ -533,7 +554,7 @@ var divider = (function (exports) {
   //     console.log("run b");
   //   }
   // }
-  // stack(a, b)(i)("stack");
+  // stack(i, a, b)("stack");
   // stack
   // run c
   // run b
@@ -552,45 +573,44 @@ var divider = (function (exports) {
     });
     return keys.reduce(function (accm, key) {
       // obj[key] is origin handler of task named 'key'.
-      // Each decorator owns the reference to previous decorator,
+      // Each decorator owns the reference to the previous decorator,
       // they can skip previous decorator conditionally to do itself thing,
       // or hand args to it directly, the previous decorator repeats this.
-      // A this kind decorator example:
-      // let fn1 = (prev) => (...args) => args.length > 0 ? prev(...args) : null
-      // Please see the /src/util/stack.js to learn about details.
+      // A decorator example:
+      // let fn = (prev) => (...args) => args.length > 0 ? prev(...args) : null
       accm[key] = stack.apply(void 0, [obj[key]].concat(_toConsumableArray(cleanFns)));
       return accm;
     }, {});
   }
 
-  function createSource(actionObj, discrete) {
-    var source = new Source(actionObj, discrete);
+  function createDivider(actionObj, discrete) {
+    var divider = new Divider(actionObj, discrete);
     return {
       dispatch: function dispatch(a) {
-        return source.dispatch(a);
+        return divider.dispatch(a);
       },
       subscribe: function subscribe(a, b, c) {
-        return source.subscribe(a, b, c);
+        return divider.subscribe(a, b, c);
       },
-      canWork: function canWork() {
-        return source.canWork();
+      canDispatch: function canDispatch() {
+        return divider.canDispatch();
       },
       hasTask: function hasTask(a) {
-        return source.hasTask(a);
+        return divider.hasTask(a);
       },
-      getCurrentTaskNames: function getCurrentTaskNames() {
-        return source.getCurrentTaskNames();
+      getStatus: function getStatus() {
+        return divider.getStatus();
       },
       isDiscrete: function isDiscrete() {
-        return source.isDiscrete();
+        return divider.isDiscrete();
       },
       setErrorHandler: function setErrorHandler(a) {
-        return source.setErrorHandler(a);
+        return divider.setErrorHandler(a);
       }
     };
   }
 
-  exports.createSource = createSource;
+  exports.createDivider = createDivider;
   exports.decorate = decorate;
 
   Object.defineProperty(exports, '__esModule', { value: true });

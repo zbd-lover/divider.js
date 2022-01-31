@@ -30,7 +30,7 @@ export default function stack(...fns) {
 //   }
 // }
 
-// stack(a, b)(i)("stack");
+// stack(i, a, b)("stack");
 
 // stack
 // run c

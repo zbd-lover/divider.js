@@ -24,7 +24,7 @@
         setTimeout(
           () => {
             array.push(payload);
-            notify("增加成功")
+            notify("add ok")
           },
           100
         );
@@ -35,10 +35,10 @@
             const index = array.findIndex((item) => item?.name === payload);
             if (index >= 0) {
               array.splice(index, 1);
-              notify("删除成功");
+              notify("del ok");
               return;
             }
-            notify("删除失败");
+            notify("del fail");
           },
           100
         );
@@ -52,16 +52,16 @@
     }
 
     // discrete
-    const source = divider.createSource(testActionObj, true);
+    const source = divider.createDivider(testActionObj);
     const { subscribe, dispatch } = source;
 
     subscribe("start", (action = {}) => {
       const { type, payload } = action;
-      console.log(`名为${type}的任务执行`);
+      console.log(`Run task named ${type}.`);
     })
 
     subscribe("end", (data, { type, payload }) => {
-      console.log(`任务${type}的响应为:`)
+      console.log(`Response of task named ${type}:`)
       console.log(data);
     });
 
@@ -71,6 +71,7 @@
 
     const us1 = subscribe("add", "start", () => console.log('add starts, second subscribe'));
     const us2 = subscribe("add", "end", () => console.log('add ends, second subscribe'));
+    // const error = subscribe("add", "start", ())
     // 取消订阅
     us1();
     us2();

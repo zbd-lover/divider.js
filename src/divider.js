@@ -4,7 +4,7 @@ import filterObj from "./util/filterObj";
 import WorkUnit from "./work-unit";
 import isPlainObject from "./util/isPlainObject";
 
-export default class Source {
+export default class Divider {
   constructor(actionObj, discrete) {
     this.discrete = !!discrete;
     this.errorHandler = null;
@@ -26,7 +26,7 @@ export default class Source {
   replaceActionObj(obj) {
     if (this.isWorking()) {
       throw new Error(
-        `Can't replace 'action-object' while source working.`
+        `Can't replace 'action-object' while working.`
       );
     }
     this.init(obj);
@@ -40,7 +40,7 @@ export default class Source {
     return this.workUnits.some((wu) => wu.isWorking());
   }
 
-  canWork() {
+  canDispatch() {
     return this.discrete ? true : !this.isWorking();
   }
 
@@ -59,7 +59,7 @@ export default class Source {
     return this.workUnits.find((wu) => wu.name === name);
   }
 
-  getCurrentTaskNames() {
+  getStatus() {
     const names = this.workUnits
       .filter((wu) => wu.isWorking())
       .map((wu) => wu.name);
@@ -69,7 +69,7 @@ export default class Source {
   subscribe(name, tag, fn) {
     if (this.isWorking()) {
       throw new Error(`
-        Can't subscribe source while working.`
+        Can't subscribe while working.`
       );
     }
 
@@ -114,28 +114,34 @@ export default class Source {
     if (!this.hasTask(nextName)) {
       throw new Error(`Unknown task: ${nextName}.`);
     }
-    if (!this.canWork()) {
-      const currName = this.getCurrentWorkName();
+    if (!this.canDispatch()) {
+      const currName = this.getStatus();
       throw new Error(`
-        Can't do task named ${currName}.
-        In sequence (not discrete) mode, each task only do one by one,
-        the current task named ${nextName}.`
+        Can't dispatch action, action.type is ${nextName}.
+        In sequence (not discrete) mode, we only dispatch action one by one,
+        the current working action.type is ${currName}.`
       );
     }
 
     const workUnit = this.getWorkUnit(nextName);
-    workUnit.start(action);
-
-    // Notify is called in custom task function manually.
-    let notify = (response) => workUnit.end(response, action)
+    // notify is called in custom task function manually.
+    let notify = (response, $action) => workUnit.end(response, $action);
     const task = this.getTask(nextName);
 
+    workUnit.start(action);
     try {
-      task(action, (response) => notify && notify(response, action));
+      task(action, (...args) => {
+        const [response, $action = action] = args;
+        if (notify && args.length > 0) {
+          notify(response, $action);
+        } else if (args.length === 0) {
+          workUnit.interrupt(true, $action);
+        }
+      });
     } catch (e) {
       const { type, ...rest } = action;
       notify = null;
-      workUnit.interrupt();
+      workUnit.interrupt(false);
       if (this.errorHandler) {
         this.errorHandler({ error: e, action })
       } else {

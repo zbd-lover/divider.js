@@ -13,7 +13,7 @@ export default function filterObj(obj, type = "string") {
   return keys.reduce(
     (accm, key) => {
       const val = obj[key];
-      if (!type || kindOf(val) === type) {
+      if (kindOf(val) === type) {
         accm[key] = obj[key];
         return accm;
       }
