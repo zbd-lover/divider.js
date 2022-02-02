@@ -37,14 +37,29 @@ const UserAO = {
 // See the example/index.html to learn more.
 
 // With Redux
-function reducer() {}
+const validTypes = ["UPDATE", "SMOKE"];
+function reducer(state, {type, payload}) {
+  if (!validTypes.includes(type)) {
+    if (typeof state === "undefined") {
+      return {};
+    }
+    return state;
+  }
+  if (type === "UPDATE") {
+    return {
+      ...state,
+      ...payload
+    }
+  }
+}
 const store = createStore(reducer);
-const divider = createDivider(divider)
-divider.subscribe("update", "end", (response, action) => {
+
+const divider = createDivider(UserAO);
+divider.subscribe("UPDATE", "end", (response, action) => {
   if (response.success) { 
     store.dispatch(action);
   }
-})
+});
 
 // Advance api: decorate
 function checkDecorator(lastHandler) {
