@@ -1,5 +1,6 @@
 import Divider from "./divider";
 import decorate from "./decorate";
+import applyBuiltInErrHandler from "./built-in/error-handler";
 
 function createDivider(actionObj, discrete) {
   const divider = new Divider(actionObj, discrete);
@@ -11,11 +12,13 @@ function createDivider(actionObj, discrete) {
     hasTask: (a) => divider.hasTask(a),
     getStatus: () => divider.getStatus(),
     isDiscrete: () => divider.isDiscrete(),
+    replaceActionObj: (obj) => divider.replaceActionObj(obj),
     setErrorHandler: (a) => divider.setErrorHandler(a),
   }
 }
 
 export {
   createDivider,
-  decorate
+  decorate,
+  applyBuiltInErrHandler
 }

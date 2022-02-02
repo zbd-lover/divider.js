@@ -37,7 +37,7 @@ export declare interface DivderErrorHandler {
 
 export interface Divider {
   subscribe: typeof Subscribe,
-  dispatch<T>(action: ActionWithPayload<T>): Dispatch<T>;
+  dispatch: <T>(action: ActionWithPayload<T>) => Dispatch<T>;
   canDispatch: () => boolean;
   hasTask: (name?: string) => boolean;
   getStatus: () => string[];

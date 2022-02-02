@@ -20,6 +20,7 @@ export default class Divider {
     }
     this.cleanActionObj = filterObj(actionObj, "function");
     this.validWorks = Object.keys(this.cleanActionObj);
+    this.workUnits.forEach((wu) => wu.interrupt(false));
     this.workUnits = this.validWorks.map((name) => new WorkUnit(name));
   }
 
@@ -45,13 +46,13 @@ export default class Divider {
   }
 
   hasTask(name) {
-    if (typeof name !== 'string') {
+    if (typeof name !== "string") {
       return false;
     }
     return !isUndef(this.cleanActionObj[name])
   }
 
-  getTask(name) {
+  getTaskFn(name) {
     return this.cleanActionObj[name];
   }
 
@@ -82,10 +83,11 @@ export default class Divider {
       targetWorkUnits = this.workUnits;
     } else {
       if (!this.hasTask(name)) {
-        console.warn(`Cant't subscribe undefined task named ${name}.`)
-        return;
+        throw new Error(`
+          Cant't subscribe undefined task named ${name}.
+        `);
       }
-      // to subscribe a specified task.
+      // to subscribe a certain task.
       targetWorkUnits = [this.getWorkUnit(name)];
       position = 1;
     }
@@ -103,7 +105,7 @@ export default class Divider {
 
   dispatch(action) {
     if (!isPlainObject(action)) {
-      throwTypeError(action, "action", "must", "plain object");
+      throwTypeError(action, "action", "must", "'plain object'");
     }
 
     if (typeof action.type !== 'string') {
@@ -114,8 +116,9 @@ export default class Divider {
     if (!this.hasTask(nextName)) {
       throw new Error(`Unknown task: ${nextName}.`);
     }
+
     if (!this.canDispatch()) {
-      const currName = this.getStatus();
+      const currName = this.getStatus()[0];
       throw new Error(`
         Can't dispatch action, action.type is ${nextName}.
         In sequence (not discrete) mode, we only dispatch action one by one,
@@ -124,20 +127,25 @@ export default class Divider {
     }
 
     const workUnit = this.getWorkUnit(nextName);
-    // notify is called in custom task function manually.
-    let notify = (response, $action) => workUnit.end(response, $action);
-    const task = this.getTask(nextName);
+    const taskFn = this.getTaskFn(nextName);
 
+    // Toggle task's status and run hooks
     workUnit.start(action);
+
+    // notify is called in custom task function manually.
+    let notify = (response, $action = action) => workUnit.end(response, $action);
+    const noifyWrapper = (...args) => {
+      if (notify && args.length > 0) {
+        const [response, customAction] = args;
+        notify(response, customAction);
+      } else if (args.length === 0) {
+        // Actively to interrupt task.
+        workUnit.interrupt(true, action);
+      }
+    }
+
     try {
-      task(action, (...args) => {
-        const [response, $action = action] = args;
-        if (notify && args.length > 0) {
-          notify(response, $action);
-        } else if (args.length === 0) {
-          workUnit.interrupt(true, $action);
-        }
-      });
+      taskFn(action, noifyWrapper);
     } catch (e) {
       const { type, ...rest } = action;
       notify = null;

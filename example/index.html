@@ -26,7 +26,7 @@
             array.push(payload);
             notify("add ok")
           },
-          100
+          50
         );
       },
       "del": ({ payload }, notify) => {
@@ -40,41 +40,38 @@
             }
             notify("del fail");
           },
-          100
+          50
         );
       },
       "query": ({ payload }, notify) => {
         setTimeout(
           () => notify([...array]),
-          100
+          50
         );
-      }
+      },
     }
 
     // discrete
-    const source = divider.createDivider(testActionObj);
+    const source = divider.createDivider(testActionObj, true);
     const { subscribe, dispatch } = source;
 
-    subscribe("start", (action = {}) => {
-      const { type, payload } = action;
-      console.log(`Run task named ${type}.`);
-    })
+    // subscribe("start", (action = {}) => {
+    //   const { type, payload } = action;
+    //   console.log(`Run task named ${type}.`);
+    // })
 
-    subscribe("end", (data, { type, payload }) => {
-      console.log(`Response of task named ${type}:`)
-      console.log(data);
-    });
+    // subscribe("end", (data, { type, payload }) => {
+    //   console.log(`Response of task named ${type}:`)
+    //   console.log(data);
+    // });
 
     subscribe("add", "start", () => console.log('add starts'))
     subscribe("add", "end", () => console.log('add ends'));
 
-
-    const us1 = subscribe("add", "start", () => console.log('add starts, second subscribe'));
-    const us2 = subscribe("add", "end", () => console.log('add ends, second subscribe'));
-    // const error = subscribe("add", "start", ())
-    // 取消订阅
-    us1();
-    us2();
+    const unSub1 = subscribe("add", "start", () => console.log('add starts, second subscribe'));
+    const unSub2 = subscribe("add", "end", () => console.log('add ends, second subscribe'));
+    unSub1();
+    unSub2();
 
     const list = document.getElementById('list');
     subscribe("query", "end", (data = []) => {
@@ -86,7 +83,7 @@
       });
     });
 
-    // 自动关联
+    // auto relate
     subscribe("end", (data, { type }) => {
       if (type !== "query") {
         dispatch({ type: "query" });
@@ -102,12 +99,14 @@
         }
       });
     });
+    
     document.getElementById("del").addEventListener("click", () => {
       dispatch({
         type: "del",
         payload: input.value
       });
     });
+
   </script>
 </body>
 

@@ -1,6 +1,6 @@
 {
   "name": "divider.js",
-  "version": "4.0.0",
+  "version": "4.0.4",
   "description": "Divide a set of relevant operation and side effects in JavaScript apps",
   "main": "lib/divider.js",
   "module": "es/divider.js",
