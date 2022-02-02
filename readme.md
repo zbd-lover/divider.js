@@ -27,15 +27,26 @@ const UserAO = {
      if (data.success) {
        notify(data.data);
      } else {
-      // this operation will be ignore
+      // This operation will be ignore
+      // listeners of 'end' will not receive response.
        notify();
      }
   },
   "SMOKE": () => {}
 }
-
 // See the example/index.html to learn more.
 
+// With Redux
+function reducer() {}
+const store = createStore(reducer);
+const divider = createDivider(divider)
+divider.subscribe("update", "end", (response, action) => {
+  if (response.success) { 
+    store.dispatch(action);
+  }
+})
+
+// Advance api: decorate
 function checkDecorator(lastHandler) {
   const hanlder = (action, notify) => {
     if (action.payload.permission.expire) {
@@ -68,4 +79,4 @@ divider1.dispatch({type: "SMOKE"});
 
 The important
 `subscribe` api used to do some effects.
-`decorate` api used to organize your operations, includes: modify, prohibit...
+`decorate` api is used to organize your operations, prohibit, intercept and so on.
